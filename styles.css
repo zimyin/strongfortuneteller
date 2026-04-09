@@ -87,13 +87,13 @@ button, input, select { font: inherit; color-scheme: dark; }
 .hero-card {
   background: var(--bg-alt);
   color: var(--text-primary);
-  padding: 36px 36px 30px;
+  padding: 20px 36px 30px;
   margin: 0 calc(-50vw + 50%) 28px;
   width: 100vw;
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: center;
   gap: 24px;
-  align-items: flex-start;
   border: none;
   border-bottom: 1px solid var(--neon-blue);
   box-shadow: 0 1px 20px rgba(0, 212, 255, 0.1), inset 0 -1px 0 rgba(178, 75, 243, 0.15);
@@ -104,11 +104,38 @@ button, input, select { font: inherit; color-scheme: dark; }
 
 .hero-card h1 {
   font-family: var(--serif);
-  font-size: 1.6rem;
-  font-weight: 700;
+  font-size: 2.2rem;
+  font-weight: 900;
   margin: 0;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.15em;
   color: var(--text-primary);
+  text-align: center;
+  width: 100%;
+}
+
+/* ===== 标题效果 ===== */
+.cyber-title {
+  position: relative;
+  display: inline-block;
+}
+
+.cyber-title span {
+  position: relative;
+  display: inline-block;
+  color: var(--accent-light);
+  -webkit-text-fill-color: var(--accent-light);
+  letter-spacing: 0.1em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+/* 底部细线 */
+.cyber-title::after {
+  content: '';
+  display: block;
+  margin-top: 6px;
+  height: 1px;
+  background: linear-gradient(90deg, var(--accent) 0%, transparent 100%);
+  opacity: 0.35;
 }
 
 .hero-version {
@@ -223,7 +250,7 @@ button, input, select { font: inherit; color-scheme: dark; }
   border: 1px solid var(--border);
   background: var(--panel-bg);
   border-radius: 0;
-  padding: 28px;
+  padding: 20px;
   box-shadow: 0 0 15px rgba(0, 212, 255, 0.03);
   backdrop-filter: none;
   position: relative;
@@ -243,10 +270,10 @@ button, input, select { font: inherit; color-scheme: dark; }
 .panel-heading {
   display: flex;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
   align-items: flex-start;
-  margin-bottom: 24px;
-  padding-bottom: 16px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
   border-bottom: 2px solid transparent;
   border-image: linear-gradient(90deg, var(--neon-blue), var(--neon-purple)) 1;
 }
@@ -254,66 +281,89 @@ button, input, select { font: inherit; color-scheme: dark; }
 .panel h2 {
   font-family: var(--serif);
   margin: 0;
-  font-size: 1.1rem;
+  font-size: 0.92rem;
   letter-spacing: 0.04em;
 }
 
 /* ===== 表单 ===== */
-.fortune-form { display: grid; gap: 16px; }
+.fortune-form { display: grid; gap: 14px; }
 
 .input-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 10px;
 }
 
-.input-group { display: grid; gap: 6px; }
+.input-group {
+  display: grid;
+  gap: 3px;
+  position: relative;
+}
 
 .input-group span {
-  color: var(--text-secondary);
-  font-size: 0.85rem;
-  font-weight: 500;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .input-group input, .input-group select {
   width: 100%;
-  padding: 10px 12px;
+  padding: 8px 10px;
   border-radius: 0;
   border: 1px solid var(--border);
   background: var(--bg);
   color: var(--text-primary);
   outline: none;
   transition: border-color 0.15s ease;
+  font-size: 0.8rem;
+}
+
+.input-group input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.5;
 }
 
 .input-group input:focus, .input-group select:focus {
   border-color: var(--accent);
 }
 
+.input-group select {
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236a6a82' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 12px;
+  padding-right: 30px;
+}
+
 /* ===== 按钮 ===== */
 .primary-button {
-  padding: 12px 18px;
+  padding: 9px 16px;
   background: var(--accent);
   color: var(--bg);
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: 0.78rem;
   border: none;
   border-radius: 0;
   cursor: pointer;
   transition: opacity 0.15s;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
 }
 
 .primary-button:hover { opacity: 0.85; }
 
 .ghost-button {
-  padding: 8px 14px;
+  padding: 5px 10px;
   background: transparent;
   color: var(--text-muted);
   border: 1px solid var(--border);
   border-radius: 0;
   cursor: pointer;
-  font-size: 0.82rem;
+  font-size: 0.72rem;
   transition: border-color 0.15s;
   letter-spacing: 0.02em;
 }
@@ -326,19 +376,30 @@ button, input, select { font: inherit; color-scheme: dark; }
 
 /* ===== 提示卡 ===== */
 .notice-card {
-  margin-top: 20px;
-  padding: 14px 16px;
+  margin-top: 18px;
+  padding: 10px 12px;
   border-radius: 0;
-  border: 1px solid var(--border-light);
-  background: var(--bg-alt);
+  border: 1px solid rgba(0, 212, 255, 0.1);
+  border-left: 2px solid rgba(0, 212, 255, 0.3);
+  background: rgba(0, 212, 255, 0.02);
   color: var(--text-muted);
-  line-height: 1.75;
-  font-size: 0.78rem;
+  line-height: 1.65;
+  font-size: 0.7rem;
   box-shadow: none;
   backdrop-filter: none;
+  position: relative;
 }
 
 .notice-card p { margin: 0; }
+
+.notice-books {
+  margin-top: 8px !important;
+  padding-top: 8px;
+  border-top: 1px solid rgba(0, 212, 255, 0.08);
+  font-size: 0.65rem;
+  color: rgba(160, 174, 192, 0.7);
+  letter-spacing: 0.03em;
+}
 
 /* ===== 结果区域 ===== */
 .result-panel {
@@ -2032,22 +2093,31 @@ button, input, select { font: inherit; color-scheme: dark; }
 /* ===== VIP 按钮 ===== */
 .vip-button {
   width: 100%;
-  padding: 12px 18px;
-  border: 1px solid var(--border);
-  border-radius: 0;
-  background: var(--bg-alt);
-  color: var(--text-muted);
-  font-weight: 600;
-  font-size: 0.85rem;
+  padding: 14px 16px;
+  border: none;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #1677ff, #4096ff, #1677ff);
+  background-size: 200% 200%;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.95rem;
   cursor: pointer;
-  transition: border-color 0.15s;
-  letter-spacing: 0.02em;
+  transition: all 0.3s ease;
+  letter-spacing: 0.06em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 18px rgba(22, 119, 255, 0.35), 0 0 20px rgba(22, 119, 255, 0.15);
+  animation: vip-glow 2.5s ease-in-out infinite;
+}
+
+@keyframes vip-glow {
+  0%, 100% { background-position: 0% 50%; box-shadow: 0 4px 18px rgba(22, 119, 255, 0.35), 0 0 20px rgba(22, 119, 255, 0.15); }
+  50% { background-position: 100% 50%; box-shadow: 0 4px 24px rgba(22, 119, 255, 0.5), 0 0 30px rgba(64, 150, 255, 0.25); }
 }
 
 .vip-button:hover {
-  border-color: var(--neon-purple);
-  color: var(--neon-purple);
-  box-shadow: 0 0 12px rgba(178, 75, 243, 0.12);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 24px rgba(22, 119, 255, 0.5), 0 0 30px rgba(64, 150, 255, 0.3);
+  color: #ffffff;
 }
 
 /* ===== 支付弹窗 ===== */
@@ -2431,7 +2501,8 @@ button, input, select { font: inherit; color-scheme: dark; }
     gap: 12px;
   }
 
-  .hero-card h1 { font-size: 1.3rem; }
+  .hero-card h1 { font-size: 1.8rem; }
+  .cyber-title::after { margin-top: 6px; }
 
   .hero-version { padding: 2px 8px; font-size: 0.65rem; }
 
@@ -2440,21 +2511,28 @@ button, input, select { font: inherit; color-scheme: dark; }
   .hero-badge-group { min-width: unset; justify-content: flex-start; gap: 4px; }
   .hero-badge { padding: 3px 8px; font-size: 0.68rem; }
 
-  .panel { padding: 16px; }
-  .panel-heading { margin-bottom: 16px; padding-bottom: 12px; }
-  .panel-heading h2 { font-size: 1.05rem; }
+  .panel { padding: 14px; }
+  .panel-heading { margin-bottom: 12px; padding-bottom: 8px; }
+  .panel-heading h2 { font-size: 0.85rem; }
 
-  .input-row { grid-template-columns: 1fr; gap: 10px; }
+  .input-row { grid-template-columns: 1fr; gap: 8px; }
+
+  .fortune-form { gap: 10px; }
 
   .input-group input, .input-group select {
-    padding: 10px 12px;
-    font-size: 16px;
+    padding: 8px 10px;
+    font-size: 0.78rem;
   }
 
-  .primary-button { padding: 12px; font-size: 0.9rem; }
-  .ghost-button { padding: 6px 10px; font-size: 0.78rem; }
+  .input-group span {
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+  }
 
-  .notice-card { padding: 10px 12px; font-size: 0.78rem; }
+  .primary-button { padding: 9px; font-size: 0.78rem; }
+  .ghost-button { padding: 4px 8px; font-size: 0.68rem; }
+
+  .notice-card { padding: 8px 10px; font-size: 0.68rem; }
 
   .result-panel { min-height: auto; }
 
@@ -2566,7 +2644,7 @@ button, input, select { font: inherit; color-scheme: dark; }
   .ziwei-summary-icon { font-size: 1.2rem; }
   .ziwei-star-desc { font-size: 0.72rem; padding: 5px 8px; }
   .ziwei-unlock-card { padding: 18px 14px; }
-  .vip-button { font-size: 0.82rem; padding: 10px 12px; }
+  .vip-button { font-size: 0.9rem; padding: 12px 12px; }
 
   .pay-modal { padding: 20px 16px; }
   .pay-header h2 { font-size: 1.05rem; }
@@ -2579,16 +2657,15 @@ button, input, select { font: inherit; color-scheme: dark; }
   .chat-suggest-btn { font-size: 0.72rem; padding: 5px 8px; }
   .chat-bubble { max-width: 88%; padding: 8px 12px; font-size: 0.82rem; }
   .chat-avatar { width: 24px; height: 24px; font-size: 0.75rem; }
-  .chat-input { padding: 10px 12px; font-size: 16px; }
+  .chat-input { padding: 10px 12px; font-size: 0.85rem; }
   .chat-send-btn { width: 36px; height: 36px; }
 
   .section-tag { font-size: 0.7rem; margin-bottom: 6px; }
-  .eyebrow { font-size: 0.68rem; }
 }
 
 @media (max-width: 380px) {
   .page-shell { width: calc(100% - 16px); }
-  .hero-card h1 { font-size: 1.15rem; }
+  .hero-card h1 { font-size: 1.5rem; }
   .hero-badge { padding: 2px 6px; font-size: 0.65rem; }
   .pillar-grid { grid-template-columns: 1fr; }
   .monthly-grid { grid-template-columns: 1fr; }
