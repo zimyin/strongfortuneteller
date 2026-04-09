@@ -3,3 +3,4 @@ node_modules/
 .codebuddy/
 *.pdf
 extracted_texts/
+dist/
