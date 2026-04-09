@@ -62,7 +62,7 @@ git init
 git checkout -b gh-pages
 git add -A
 git commit -m "deploy: $(date '+%Y-%m-%d %H:%M') 混淆构建"
-git push -f "https://github.com/zimyin/strongfortuneteller.git" gh-pages
+git push -f "https://github.com/yesmanv2/strongfortuneteller.git" gh-pages
 cd ..
 
 # 清理
@@ -70,5 +70,5 @@ rm -rf dist
 
 echo ""
 echo "✅ 部署完成！"
-echo "🌐 网址: https://zimyin.github.io/strongfortuneteller/"
+echo "🌐 网址: https://yesmanv2.github.io/strongfortuneteller/"
 echo "   (首次部署需等待 1-2 分钟生效)"
