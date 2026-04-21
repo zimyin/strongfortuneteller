@@ -308,22 +308,126 @@ const HUAGAI_TABLE = { "申子辰": "辰", "寅午戌": "戌", "亥卯未": "未
 const TIANDE_TABLE = { 寅: "丁", 卯: "申", 辰: "壬", 巳: "辛", 午: "亥", 未: "甲", 申: "癸", 酉: "寅", 戌: "丙", 亥: "乙", 子: "巳", 丑: "庚" };
 const YUEDE_TABLE = { 寅: "丙", 卯: "甲", 辰: "壬", 巳: "庚", 午: "丙", 未: "甲", 申: "壬", 酉: "庚", 戌: "丙", 亥: "甲", 子: "壬", 丑: "庚" };
 
-function analyzeShensha(pillars, dayStem) {
+/* ===== 扩展神煞表（补到25个） ===== */
+// 禄神：日干临官之位
+const LUSHEN_TABLE = { 甲: "寅", 乙: "卯", 丙: "巳", 戊: "巳", 丁: "午", 己: "午", 庚: "申", 辛: "酉", 壬: "亥", 癸: "子" };
+// 羊刃：日干帝旺之位（阳干取刃，阴干取禄前一位）
+const YANGREN_TABLE = { 甲: "卯", 乙: "辰", 丙: "午", 戊: "午", 丁: "未", 己: "未", 庚: "酉", 辛: "戌", 壬: "子", 癸: "丑" };
+// 将星：三合局中位（年/日支 → 将星支）
+const JIANGXING_TABLE = { "申子辰": "子", "寅午戌": "午", "亥卯未": "卯", "巳酉丑": "酉" };
+// 亡神：三合局临官前位
+const WANGSHEN_TABLE = { "申子辰": "亥", "寅午戌": "巳", "亥卯未": "寅", "巳酉丑": "申" };
+// 劫煞：三合局绝位
+const JIESHA_TABLE = { "申子辰": "巳", "寅午戌": "亥", "亥卯未": "申", "巳酉丑": "寅" };
+// 灾煞：冲将星
+const ZAISHA_TABLE = { "申子辰": "午", "寅午戌": "子", "亥卯未": "酉", "巳酉丑": "卯" };
+// 红鸾：年支起卯逆行（子年卯/丑年寅/寅年丑/卯年子/辰年亥...）
+const HONGLUAN_TABLE = { 子: "卯", 丑: "寅", 寅: "丑", 卯: "子", 辰: "亥", 巳: "戌", 午: "酉", 未: "申", 申: "未", 酉: "午", 戌: "巳", 亥: "辰" };
+// 天喜：红鸾对冲
+const TIANXI_TABLE = { 子: "酉", 丑: "申", 寅: "未", 卯: "午", 辰: "巳", 巳: "辰", 午: "卯", 未: "寅", 申: "丑", 酉: "子", 戌: "亥", 亥: "戌" };
+// 孤辰（男）：亥子丑见寅、寅卯辰见巳、巳午未见申、申酉戌见亥
+const GUCHEN_TABLE = { 亥: "寅", 子: "寅", 丑: "寅", 寅: "巳", 卯: "巳", 辰: "巳", 巳: "申", 午: "申", 未: "申", 申: "亥", 酉: "亥", 戌: "亥" };
+// 寡宿（女）：亥子丑见戌、寅卯辰见丑、巳午未见辰、申酉戌见未
+const GUASU_TABLE = { 亥: "戌", 子: "戌", 丑: "戌", 寅: "丑", 卯: "丑", 辰: "丑", 巳: "辰", 午: "辰", 未: "辰", 申: "未", 酉: "未", 戌: "未" };
+// 金舆：日干富贵载体
+const JINYU_TABLE = { 甲: "辰", 乙: "巳", 丙: "未", 丁: "申", 戊: "未", 己: "申", 庚: "戌", 辛: "亥", 壬: "丑", 癸: "寅" };
+// 国印贵人
+const GUOYIN_TABLE = { 甲: "戌", 乙: "亥", 丙: "丑", 丁: "寅", 戊: "丑", 己: "寅", 庚: "辰", 辛: "巳", 壬: "未", 癸: "申" };
+// 学堂（日干长生对应支）
+const XUETANG_TABLE = { 甲: "亥", 乙: "午", 丙: "寅", 丁: "酉", 戊: "寅", 己: "酉", 庚: "巳", 辛: "子", 壬: "申", 癸: "卯" };
+// 词馆（日干→文思/口才位）
+const CIGUAN_TABLE = { 甲: "巳", 乙: "巳", 丙: "申", 丁: "申", 戊: "申", 己: "申", 庚: "亥", 辛: "亥", 壬: "寅", 癸: "寅" };
+// 天医：月支前一位（帮助疗愈）
+const TIANYI_YI_TABLE = { 子: "亥", 丑: "子", 寅: "丑", 卯: "寅", 辰: "卯", 巳: "辰", 午: "巳", 未: "午", 申: "未", 酉: "申", 戌: "酉", 亥: "戌" };
+// 血刃：年支→血光冲支
+const XUEREN_TABLE = { 子: "丑", 丑: "未", 寅: "戌", 卯: "辰", 辰: "巳", 巳: "申", 午: "酉", 未: "子", 申: "卯", 酉: "戌", 戌: "寅", 亥: "未" };
+// 三奇贵人：四柱天干组合
+const SANQI_GROUPS = [
+  { name: "天上三奇", stems: ["甲", "戊", "庚"], desc: "甲戊庚齐，主贵气冲天，多出将相之才" },
+  { name: "地下三奇", stems: ["乙", "丙", "丁"], desc: "乙丙丁齐，主才华横溢，文星高照" },
+  { name: "人中三奇", stems: ["壬", "癸", "辛"], desc: "壬癸辛齐，主智慧灵敏，谋略过人" },
+];
+
+function analyzeShensha(pillars, dayStem, gender) {
   const results = [];
   const branches = pillars.map(p => p.branch);
   const stems = pillars.map(p => p.stem);
   const yearBranch = pillars[0].branch;
   const monthBranch = pillars[1].branch;
-  (TIANYI_TABLE[dayStem] || []).forEach(b => { if (branches.includes(b)) results.push({ name: "天乙贵人", icon: "⭐", type: "吉", desc: "逢凶化吉，多得贵人相助" }); });
-  if (WENCHANG_TABLE[dayStem] && branches.includes(WENCHANG_TABLE[dayStem])) results.push({ name: "文昌贵人", icon: "📖", type: "吉", desc: "利考试学术，文才出众" });
-  if (TIANDE_TABLE[monthBranch] && stems.includes(TIANDE_TABLE[monthBranch])) results.push({ name: "天德贵人", icon: "🌟", type: "吉", desc: "化灾解厄，心性善良" });
-  if (YUEDE_TABLE[monthBranch] && stems.includes(YUEDE_TABLE[monthBranch])) results.push({ name: "月德贵人", icon: "🌙", type: "吉", desc: "为人宽厚，少灾少难" });
-  const sanheKey = Object.keys(YIMA_TABLE).find(k => k.includes(yearBranch));
+  const dayBranch = pillars[2].branch;
+  const sanheKey = Object.keys(YIMA_TABLE).find(k => k.includes(yearBranch) || k.includes(dayBranch)) || "";
+  const push = (item, locatePos) => {
+    // locatePos: 若传入则查找所在柱（用于提示）
+    let pos = "";
+    if (locatePos && locatePos.kind === "branch") {
+      const idx = branches.indexOf(locatePos.value);
+      if (idx >= 0) pos = ["年", "月", "日", "时"][idx] + "支";
+    } else if (locatePos && locatePos.kind === "stem") {
+      const idx = stems.indexOf(locatePos.value);
+      if (idx >= 0) pos = ["年", "月", "日", "时"][idx] + "干";
+    }
+    if (pos) item.pos = pos;
+    results.push(item);
+  };
+
+  // ===== 原有 7 个 =====
+  (TIANYI_TABLE[dayStem] || []).forEach(b => { if (branches.includes(b)) push({ name: "天乙贵人", icon: "⭐", type: "吉", desc: "逢凶化吉，多得贵人相助" }, { kind: "branch", value: b }); });
+  if (WENCHANG_TABLE[dayStem] && branches.includes(WENCHANG_TABLE[dayStem])) push({ name: "文昌贵人", icon: "📖", type: "吉", desc: "利考试学术，文才出众" }, { kind: "branch", value: WENCHANG_TABLE[dayStem] });
+  if (TIANDE_TABLE[monthBranch] && stems.includes(TIANDE_TABLE[monthBranch])) push({ name: "天德贵人", icon: "🌟", type: "吉", desc: "化灾解厄，心性善良" }, { kind: "stem", value: TIANDE_TABLE[monthBranch] });
+  if (YUEDE_TABLE[monthBranch] && stems.includes(YUEDE_TABLE[monthBranch])) push({ name: "月德贵人", icon: "🌙", type: "吉", desc: "为人宽厚，少灾少难" }, { kind: "stem", value: YUEDE_TABLE[monthBranch] });
   if (sanheKey) {
-    if (branches.includes(YIMA_TABLE[sanheKey])) results.push({ name: "驿马", icon: "🐎", type: "动", desc: "主奔波迁移，适合外向发展" });
-    if (branches.includes(TAOHUA_TABLE[sanheKey])) results.push({ name: "桃花", icon: "🌸", type: "桃花", desc: "异性缘旺，有魅力" });
-    if (branches.includes(HUAGAI_TABLE[sanheKey])) results.push({ name: "华盖", icon: "☂️", type: "孤", desc: "聪明独立，有哲学倾向" });
+    if (branches.includes(YIMA_TABLE[sanheKey])) push({ name: "驿马", icon: "🐎", type: "动", desc: "主奔波迁移，适合外向发展" }, { kind: "branch", value: YIMA_TABLE[sanheKey] });
+    if (branches.includes(TAOHUA_TABLE[sanheKey])) push({ name: "桃花", icon: "🌸", type: "桃花", desc: "异性缘旺，有魅力" }, { kind: "branch", value: TAOHUA_TABLE[sanheKey] });
+    if (branches.includes(HUAGAI_TABLE[sanheKey])) push({ name: "华盖", icon: "☂️", type: "孤", desc: "聪明独立，有哲学倾向" }, { kind: "branch", value: HUAGAI_TABLE[sanheKey] });
   }
+
+  // ===== 新增 18 个 =====
+  // 禄神
+  if (LUSHEN_TABLE[dayStem] && branches.includes(LUSHEN_TABLE[dayStem])) push({ name: "禄神", icon: "💰", type: "吉", desc: "主俸禄爵位，自食其力，财源稳定" }, { kind: "branch", value: LUSHEN_TABLE[dayStem] });
+  // 羊刃
+  if (YANGREN_TABLE[dayStem] && branches.includes(YANGREN_TABLE[dayStem])) push({ name: "羊刃", icon: "⚔️", type: "凶", desc: "性格刚烈，魄力大，忌冲动，易有血光/手术" }, { kind: "branch", value: YANGREN_TABLE[dayStem] });
+  // 将星（按年支三合局）
+  const yearSanheKey = Object.keys(JIANGXING_TABLE).find(k => k.includes(yearBranch));
+  if (yearSanheKey && branches.includes(JIANGXING_TABLE[yearSanheKey])) push({ name: "将星", icon: "🎖", type: "吉", desc: "主掌权、领导力强，有将帅之才" }, { kind: "branch", value: JIANGXING_TABLE[yearSanheKey] });
+  // 亡神
+  if (yearSanheKey && branches.includes(WANGSHEN_TABLE[yearSanheKey])) push({ name: "亡神", icon: "👤", type: "凶", desc: "主城府深、心机重，逢之易破财招祸" }, { kind: "branch", value: WANGSHEN_TABLE[yearSanheKey] });
+  // 劫煞
+  if (yearSanheKey && branches.includes(JIESHA_TABLE[yearSanheKey])) push({ name: "劫煞", icon: "💥", type: "凶", desc: "主破财劫夺，易遭外来之灾" }, { kind: "branch", value: JIESHA_TABLE[yearSanheKey] });
+  // 灾煞
+  if (yearSanheKey && branches.includes(ZAISHA_TABLE[yearSanheKey])) push({ name: "灾煞", icon: "⚡", type: "凶", desc: "主意外灾厄，出行需谨慎" }, { kind: "branch", value: ZAISHA_TABLE[yearSanheKey] });
+  // 红鸾
+  if (HONGLUAN_TABLE[yearBranch] && branches.includes(HONGLUAN_TABLE[yearBranch])) push({ name: "红鸾", icon: "💕", type: "喜", desc: "主婚姻喜庆，逢之主成亲、添丁" }, { kind: "branch", value: HONGLUAN_TABLE[yearBranch] });
+  // 天喜
+  if (TIANXI_TABLE[yearBranch] && branches.includes(TIANXI_TABLE[yearBranch])) push({ name: "天喜", icon: "🎉", type: "喜", desc: "主喜庆之事，人缘佳，异性缘旺" }, { kind: "branch", value: TIANXI_TABLE[yearBranch] });
+  // 孤辰（以男性为主使用，但现代命理男女通用，仅区分侧重）
+  if (GUCHEN_TABLE[yearBranch] && branches.includes(GUCHEN_TABLE[yearBranch])) push({ name: "孤辰", icon: "🌑", type: "孤", desc: "六亲缘薄，性格清高孤僻" }, { kind: "branch", value: GUCHEN_TABLE[yearBranch] });
+  // 寡宿
+  if (GUASU_TABLE[yearBranch] && branches.includes(GUASU_TABLE[yearBranch])) push({ name: "寡宿", icon: "🌘", type: "孤", desc: `情感孤独，${gender === 'female' ? '女命尤需留意婚姻' : '宜专注事业精进'}` }, { kind: "branch", value: GUASU_TABLE[yearBranch] });
+  // 金舆
+  if (JINYU_TABLE[dayStem] && branches.includes(JINYU_TABLE[dayStem])) push({ name: "金舆", icon: "🚗", type: "吉", desc: "主富贵安乐，出行有车马，配偶贤良" }, { kind: "branch", value: JINYU_TABLE[dayStem] });
+  // 国印贵人
+  if (GUOYIN_TABLE[dayStem] && branches.includes(GUOYIN_TABLE[dayStem])) push({ name: "国印贵人", icon: "🏛", type: "吉", desc: "主掌权印，利公职、文教、官运" }, { kind: "branch", value: GUOYIN_TABLE[dayStem] });
+  // 学堂
+  if (XUETANG_TABLE[dayStem] && branches.includes(XUETANG_TABLE[dayStem])) push({ name: "学堂", icon: "🎓", type: "吉", desc: "主学业有成，知识根基深厚" }, { kind: "branch", value: XUETANG_TABLE[dayStem] });
+  // 词馆
+  if (CIGUAN_TABLE[dayStem] && branches.includes(CIGUAN_TABLE[dayStem])) push({ name: "词馆", icon: "✒️", type: "吉", desc: "主文采斐然，口才佳，利文笔创作" }, { kind: "branch", value: CIGUAN_TABLE[dayStem] });
+  // 天医
+  if (TIANYI_YI_TABLE[monthBranch] && branches.includes(TIANYI_YI_TABLE[monthBranch])) push({ name: "天医", icon: "⚕️", type: "吉", desc: "主身体康健，遇事得医，适合医药相关" }, { kind: "branch", value: TIANYI_YI_TABLE[monthBranch] });
+  // 血刃
+  if (XUEREN_TABLE[yearBranch] && branches.includes(XUEREN_TABLE[yearBranch])) push({ name: "血刃", icon: "🩸", type: "凶", desc: "主血光之灾，注意安全驾驶及外伤" }, { kind: "branch", value: XUEREN_TABLE[yearBranch] });
+  // 三奇贵人
+  SANQI_GROUPS.forEach(g => {
+    const ordered = [stems[0], stems[1], stems[2], stems[3]];
+    // 连续三柱天干（年月日 或 月日时）按顺序齐全
+    const seq1 = ordered.slice(0, 3).join("") === g.stems.join("");
+    const seq2 = ordered.slice(1, 4).join("") === g.stems.join("");
+    if (seq1 || seq2) push({ name: g.name, icon: "🔱", type: "大吉", desc: g.desc });
+  });
+  // 天罗地网
+  const dayEl = STEM_ELEMENTS[dayStem];
+  if ((dayEl === "火") && branches.includes("戌") && branches.includes("亥")) push({ name: "天罗", icon: "🕸", type: "凶", desc: "火命逢戌亥，易遇阻碍，行事多波折" });
+  if ((dayEl === "水" || dayEl === "土") && branches.includes("辰") && branches.includes("巳")) push({ name: "地网", icon: "🕸", type: "凶", desc: "水土命逢辰巳，易陷困局，需耐心破解" });
+
   return results;
 }
 
@@ -775,4 +879,132 @@ function calculateDaYun(pillars, gender, birth) {
     steps,
     desc: `${yearYinYang}年${isMale ? "男" : "女"}命，大运${isForward ? "顺行" : "逆行"}，${startAge}岁起运。`,
   };
+}
+
+/* ===== 大运 × 流年 × 命局 三重交互分析 =====
+ * 依据：《滴天髓》"大运看十年之休咎，流年看一年之吉凶"
+ * 命理实战中，大运与流年的合冲生克才是真正决定一年吉凶的关键。
+ *
+ * 对任一流年：
+ *   1. 先定位其所属大运
+ *   2. 分析流年干支与大运干支的合冲关系（双层交互）
+ *   3. 分析流年干支与命局四柱（尤其日柱）的合冲关系
+ *   4. 综合评分调整（在原有流年评分基础上做 ±15 的微调）
+ */
+function analyzeLiuYunInteraction(yearPillar, dayunStep, natalPillars, dayStem) {
+  const out = {
+    dayun: dayunStep ? `${dayunStep.stem}${dayunStep.branch}` : "—",
+    events: [],   // 交互事件列表
+    scoreAdjust: 0,
+    tags: [],     // 标签：合/冲/刑/害/生/克
+  };
+  if (!yearPillar || !yearPillar.stem || !yearPillar.branch) return out;
+
+  const yS = yearPillar.stem, yB = yearPillar.branch;
+
+  // === 第一层：流年 × 大运 ===
+  if (dayunStep) {
+    const dS = dayunStep.stem, dB = dayunStep.branch;
+    // 天干合
+    const sk1 = yS + dS, sk2 = dS + yS;
+    if (STEM_COMBINE[sk1] || STEM_COMBINE[sk2]) {
+      const combo = STEM_COMBINE[sk1] || STEM_COMBINE[sk2];
+      out.events.push(`流年天干${yS}与大运天干${dS}相合（${combo.name}→化${combo.result}）`);
+      out.tags.push("合");
+      out.scoreAdjust += 5;
+    }
+    // 天干冲
+    if (STEM_CLASH[sk1] || STEM_CLASH[sk2]) {
+      out.events.push(`流年天干${yS}与大运天干${dS}相冲，行动易受阻`);
+      out.tags.push("冲");
+      out.scoreAdjust -= 6;
+    }
+    // 地支六合
+    const bk1 = yB + dB, bk2 = dB + yB;
+    if (BRANCH_SIX_COMBINE[bk1] || BRANCH_SIX_COMBINE[bk2]) {
+      const c = BRANCH_SIX_COMBINE[bk1] || BRANCH_SIX_COMBINE[bk2];
+      out.events.push(`流年地支${yB}与大运地支${dB}六合（${c.name}）`);
+      out.tags.push("合");
+      out.scoreAdjust += 6;
+    }
+    // 地支六冲（最需警惕）
+    if (BRANCH_SIX_CLASH[bk1] || BRANCH_SIX_CLASH[bk2]) {
+      out.events.push(`⚠ 流年地支${yB}与大运地支${dB}相冲（${BRANCH_SIX_CLASH[bk1] || BRANCH_SIX_CLASH[bk2]}），主大变动`);
+      out.tags.push("冲");
+      out.scoreAdjust -= 10;
+    }
+    // 地支六害
+    if (BRANCH_SIX_HARM[bk1] || BRANCH_SIX_HARM[bk2]) {
+      out.events.push(`流年与大运地支相害（${BRANCH_SIX_HARM[bk1] || BRANCH_SIX_HARM[bk2]}），小人暗害`);
+      out.tags.push("害");
+      out.scoreAdjust -= 4;
+    }
+    // 伏吟/反吟（干支完全相同/完全相冲）
+    if (yS === dS && yB === dB) {
+      out.events.push(`⚠ 流年与大运干支完全相同（伏吟），易有旧事重演、压力加倍`);
+      out.tags.push("伏吟");
+      out.scoreAdjust -= 6;
+    }
+  }
+
+  // === 第二层：流年 × 命局四柱 ===
+  const names = ["年柱", "月柱", "日柱", "时柱"];
+  natalPillars.forEach((p, i) => {
+    // 天干合
+    const sk1 = yS + p.stem, sk2 = p.stem + yS;
+    if (STEM_COMBINE[sk1] || STEM_COMBINE[sk2]) {
+      const c = STEM_COMBINE[sk1] || STEM_COMBINE[sk2];
+      out.events.push(`流年${yS}与${names[i]}${p.stem}相合（${c.name}）`);
+      out.tags.push("合");
+      out.scoreAdjust += (i === 2 ? 6 : 3); // 合日主影响最大
+    }
+    if (STEM_CLASH[sk1] || STEM_CLASH[sk2]) {
+      out.events.push(`⚠ 流年${yS}与${names[i]}${p.stem}相冲（${STEM_CLASH[sk1] || STEM_CLASH[sk2]}）`);
+      out.tags.push("冲");
+      out.scoreAdjust -= (i === 2 ? 8 : 4);
+    }
+    // 地支六合/六冲/六害
+    const bk1 = yB + p.branch, bk2 = p.branch + yB;
+    if (BRANCH_SIX_COMBINE[bk1] || BRANCH_SIX_COMBINE[bk2]) {
+      const c = BRANCH_SIX_COMBINE[bk1] || BRANCH_SIX_COMBINE[bk2];
+      out.events.push(`流年${yB}与${names[i]}${p.branch}六合（${c.name}）`);
+      out.tags.push("合");
+      out.scoreAdjust += (i === 2 ? 7 : 4);
+    }
+    if (BRANCH_SIX_CLASH[bk1] || BRANCH_SIX_CLASH[bk2]) {
+      const tag = BRANCH_SIX_CLASH[bk1] || BRANCH_SIX_CLASH[bk2];
+      out.events.push(`⚠ 流年${yB}冲${names[i]}${p.branch}（${tag}），${i === 2 ? "冲日支主婚姻/健康波动" : i === 0 ? "冲年支主长辈事" : i === 1 ? "冲月支主工作调动" : "冲时支主子女或晚辈事"}`);
+      out.tags.push("冲");
+      out.scoreAdjust -= (i === 2 ? 10 : i === 1 ? 7 : 5);
+    }
+    if (BRANCH_SIX_HARM[bk1] || BRANCH_SIX_HARM[bk2]) {
+      out.events.push(`流年${yB}与${names[i]}${p.branch}相害`);
+      out.tags.push("害");
+      out.scoreAdjust -= 3;
+    }
+  });
+
+  // === 三合局触发判断（流年地支 + 大运地支 + 命局地支凑齐三合） ===
+  const allBranches = natalPillars.map(p => p.branch).concat(yB);
+  if (dayunStep) allBranches.push(dayunStep.branch);
+  BRANCH_THREE_COMBINE.forEach(c => {
+    const hit = c.branches.every(b => allBranches.includes(b));
+    const hasYearBranch = c.branches.includes(yB);
+    if (hit && hasYearBranch) {
+      out.events.push(`✨ 流年${yB}引动三合${c.name}→化${c.result}局成，大吉之象`);
+      out.tags.push("三合");
+      out.scoreAdjust += 8;
+    }
+  });
+
+  // 限制调整幅度，避免极端
+  if (out.scoreAdjust > 15) out.scoreAdjust = 15;
+  if (out.scoreAdjust < -18) out.scoreAdjust = -18;
+
+  // 无事件时补一句
+  if (out.events.length === 0) {
+    out.events.push(dayunStep ? `处${dayunStep.stem}${dayunStep.branch}大运，流年${yS}${yB}与命局大运无明显合冲，平稳过渡` : `流年${yS}${yB}与命局无明显合冲`);
+  }
+
+  return out;
 }

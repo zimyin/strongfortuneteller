@@ -1170,6 +1170,57 @@ button, input, select { font: inherit; color-scheme: dark; }
   letter-spacing: 0.03em;
 }
 
+.yearly-dayun-tag {
+  display: inline-block;
+  padding: 1px 8px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: #c9a86a;
+  background: rgba(201, 168, 106, 0.1);
+  border: 1px solid rgba(201, 168, 106, 0.3);
+  border-radius: 0;
+}
+
+.yearly-interaction {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-top: 1px dashed rgba(201, 168, 106, 0.25);
+  background: rgba(201, 168, 106, 0.04);
+}
+
+.yearly-ix-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #c9a86a;
+  margin-bottom: 4px;
+  letter-spacing: 0.05em;
+}
+
+.yearly-ix-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.yearly-ix-list li {
+  font-size: 0.75rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+  padding-left: 10px;
+  position: relative;
+}
+
+.yearly-ix-list li::before {
+  content: "·";
+  position: absolute;
+  left: 0;
+  color: #c9a86a;
+  font-weight: 700;
+}
+
 .yearly-body { display: grid; gap: 8px; }
 
 .yearly-scores-group { display: grid; gap: 4px; }
@@ -2741,16 +2792,32 @@ button, input, select { font: inherit; color-scheme: dark; }
 
 /* --- 神煞系统 --- */
 .shensha-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
-.shensha-badge { background: var(--glass-bg, rgba(255,255,255,.06)); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; }
+.shensha-badge { background: var(--glass-bg, rgba(255,255,255,.06)); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; position: relative; }
 .shensha-icon { font-size: 1.5rem; }
 .shensha-name { font-size: .9rem; font-weight: 700; color: var(--text-primary, #eee); }
+.shensha-pos { font-size: .68rem; color: #c9a86a; background: rgba(201,168,106,.1); padding: 1px 6px; border-radius: 8px; letter-spacing: 0.04em; }
 .shensha-type { font-size: .68rem; padding: 1px 8px; border-radius: 10px; background: rgba(99,102,241,.15); color: #a5b4fc; }
-.shensha-badge.吉 { border: 1px solid rgba(34,197,94,.3); }
+.shensha-badge.吉, .shensha-badge.大吉 { border: 1px solid rgba(34,197,94,.35); background: rgba(34,197,94,.05); }
+.shensha-badge.大吉 { border-width: 2px; }
+.shensha-badge.喜 { border: 1px solid rgba(251,113,133,.35); background: rgba(251,113,133,.05); }
 .shensha-badge.动 { border: 1px solid rgba(59,130,246,.3); }
 .shensha-badge.桃花 { border: 1px solid rgba(236,72,153,.3); }
 .shensha-badge.孤 { border: 1px solid rgba(168,85,247,.3); }
+.shensha-badge.凶 { border: 1px solid rgba(239,68,68,.4); background: rgba(239,68,68,.06); }
 .shensha-desc { font-size: .72rem; color: var(--text-muted, #888); line-height: 1.4; }
 .shensha-empty { text-align: center; padding: 20px; font-size: .82rem; color: var(--text-muted, #888); }
+
+.shensha-group { margin-bottom: 16px; }
+.shensha-group:last-child { margin-bottom: 0; }
+.shensha-group-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #c9a86a;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px dashed rgba(201,168,106,.25);
+  letter-spacing: 0.05em;
+}
 
 /* --- 空亡分析 --- */
 .kongwang-card { background: var(--glass-bg, rgba(255,255,255,.06)); border-radius: 16px; padding: 20px; }

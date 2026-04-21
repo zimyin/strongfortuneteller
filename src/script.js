@@ -517,6 +517,57 @@ const REGION_ELEMENT_MAP = {
   金门: { element: "金", direction: "东方海上", terrain: "岛屿", desc: "浯岛雄关，金气刚毅，战地风情独特", feature: "前线要塞，金水相生，利酒业文旅", advice: "金门金气凛然，适合酒业品牌和战地旅游" },
 };
 
+/* ===== 城市经度表（用于真太阳时修正） =====
+ * 公式：真太阳时 = 北京时间 + (当地经度 − 120°) × 4 分钟
+ * 东经大于120°的城市（如上海）时间比北京时间"快"，小于120°（如拉萨）"慢"
+ */
+const CITY_LONGITUDE = {
+  // 华北
+  北京: 116.41, 天津: 117.20, 石家庄: 114.52, 太原: 112.55, 呼和浩特: 111.75,
+  // 东北
+  沈阳: 123.43, 大连: 121.61, 长春: 125.32, 哈尔滨: 126.53,
+  // 华东
+  上海: 121.47, 南京: 118.78, 杭州: 120.15, 苏州: 120.62, 合肥: 117.28,
+  济南: 117.00, 青岛: 120.38, 福州: 119.30, 厦门: 118.08, 宁波: 121.55,
+  无锡: 120.30, 温州: 120.65,
+  // 华中
+  武汉: 114.30, 长沙: 112.93, 郑州: 113.62, 南昌: 115.90,
+  // 华南
+  广州: 113.26, 深圳: 114.06, 珠海: 113.58, 东莞: 113.75, 佛山: 113.12,
+  海口: 110.33, 南宁: 108.37,
+  // 西南
+  成都: 104.07, 重庆: 106.55, 昆明: 102.72, 贵阳: 106.63, 拉萨: 91.13,
+  // 西北
+  西安: 108.95, 兰州: 103.82, 银川: 106.28, 西宁: 101.78, 乌鲁木齐: 87.62,
+  // 特别行政区
+  香港: 114.17, 澳门: 113.55,
+  // 台湾
+  台北: 121.51, 新北: 121.47, 桃园: 121.30, 台中: 120.68, 台南: 120.20,
+  高雄: 120.31, 新竹: 120.97, 基隆: 121.74, 嘉义: 120.45, 花莲: 121.61,
+  台东: 121.14, 屏东: 120.49, 宜兰: 121.76, 苗栗: 120.82, 彰化: 120.54,
+  南投: 120.68, 云林: 120.54, 澎湖: 119.56, 金门: 118.33,
+};
+
+/* 真太阳时修正
+ * @param {Date} birth - 原始北京时间
+ * @param {string} cityName - 标准化后的城市名
+ * @returns {{adjusted: Date, offsetMin: number, longitude: number, note: string} | null}
+ */
+function applyTrueSolarTime(birth, cityName) {
+  if (!cityName || !birth) return null;
+  const lng = CITY_LONGITUDE[cityName];
+  if (typeof lng !== "number") return null;
+  // 当地经度与东经120°（北京时间基准）的时差（分钟）
+  const offsetMin = (lng - 120) * 4;
+  const adjusted = new Date(birth.getTime() + offsetMin * 60 * 1000);
+  const sign = offsetMin >= 0 ? "+" : "−";
+  const absMin = Math.abs(offsetMin);
+  const m = Math.floor(absMin);
+  const s = Math.round((absMin - m) * 60);
+  const note = `出生地${cityName}经度${lng.toFixed(2)}°E，与北京时间时差${sign}${m}分${s}秒，已自动修正为真太阳时`;
+  return { adjusted, offsetMin, longitude: lng, note };
+}
+
 /* 模糊匹配出生地 */
 function matchBirthplace(input) {
   if (!input) return null;
@@ -1353,10 +1404,19 @@ form.addEventListener("submit", (event) => {
 
 /* ===== 核心计算 ===== */
 function calculateFortune({ name, gender, birth, focus, birthplace }) {
-  const yearPillar = getYearPillar(birth);
-  const monthPillar = getMonthPillar(birth, yearPillar.stem);
-  const dayPillar = getDayPillar(birth);
-  const hourPillar = getHourPillar(birth, dayPillar.stem);
+  // 【新增】真太阳时修正
+  // 先匹配一次出生地拿到标准城市名，再用该城市的经度修正时辰
+  const preRegion = matchBirthplace(birthplace);
+  const solarInfo = preRegion ? applyTrueSolarTime(birth, preRegion.city) : null;
+  const originalBirth = birth;
+  const effectiveBirth = solarInfo ? solarInfo.adjusted : birth;
+
+  const yearPillar = getYearPillar(effectiveBirth);
+  const monthPillar = getMonthPillar(effectiveBirth, yearPillar.stem);
+  const dayPillar = getDayPillar(effectiveBirth);
+  const hourPillar = getHourPillar(effectiveBirth, dayPillar.stem);
+  // 将函数内后续流程的 birth 统一为修正后时间（保持原有代码少改动）
+  birth = effectiveBirth;
 
   const pillars = [
     { label: "年柱", meaning: "根基与外在印象", ...yearPillar },
@@ -1411,8 +1471,8 @@ function calculateFortune({ name, gender, birth, focus, birthplace }) {
   // 【升级】合冲刑害分析
   const interactions = analyzeInteractions(pillars);
 
-  // 【升级】神煞系统
-  const shensha = analyzeShensha(pillars, dayPillar.stem);
+  // 【升级】神煞系统（扩充到25个，加入性别参数用于孤辰寡宿判断）
+  const shensha = analyzeShensha(pillars, dayPillar.stem, gender);
 
   // 【升级】空亡分析
   const kongwang = analyzeKongWang(pillars);
@@ -1448,6 +1508,12 @@ function calculateFortune({ name, gender, birth, focus, birthplace }) {
   const yearlyFocusYear = Math.min(Math.max(currentYear, YEARLY_RANGE_START), YEARLY_RANGE_END);
   const yearlyBadgeText = currentYear < YEARLY_RANGE_START ? "起始" : currentYear > YEARLY_RANGE_END ? "最近" : "当前";
   const yearlyFortunes = [];
+  // 根据出生年推算当前年龄，用于定位所属大运步
+  const locateDayunStep = (year) => {
+    if (!dayun || !Array.isArray(dayun.steps)) return null;
+    const age = year - birth.getFullYear();
+    return dayun.steps.find(s => age >= s.ageStart && age <= s.ageEnd) || null;
+  };
   for (let y = YEARLY_RANGE_START; y <= YEARLY_RANGE_END; y++) {
     const yPillar = getYearPillarByYear(y);
     const yElement = STEM_ELEMENTS[yPillar.stem];
@@ -1455,11 +1521,26 @@ function calculateFortune({ name, gender, birth, focus, birthplace }) {
     const wealthInfluence = YEARLY_WEALTH_INFLUENCE[dayElement]?.[yElement] || { score: 60, desc: "财运平稳" };
     const careerInfluence = YEARLY_CAREER_INFLUENCE[dayElement]?.[yElement] || { score: 65, desc: "事业平稳" };
     const yNayinIdx = getGanzhiIndex(yPillar.stem, yPillar.branch);
+
+    // 【新增】大运×流年×命局 三重交互分析
+    const dayunStep = locateDayunStep(y);
+    const interaction = typeof analyzeLiuYunInteraction === "function"
+      ? analyzeLiuYunInteraction(yPillar, dayunStep, pillars, dayPillar.stem)
+      : null;
+    // 在原分数基础上用 scoreAdjust 做微调
+    let finalScore = influence.score + (interaction ? interaction.scoreAdjust : 0);
+    finalScore = Math.min(95, Math.max(35, finalScore));
+
     yearlyFortunes.push({
       year: y, stem: yPillar.stem, branch: yPillar.branch, element: yElement, nayin: NAYIN_TABLE[yNayinIdx],
-      score: influence.score, desc: influence.desc, wealthScore: wealthInfluence.score, wealthDesc: wealthInfluence.desc,
+      score: finalScore, baseScore: influence.score, desc: influence.desc,
+      wealthScore: wealthInfluence.score, wealthDesc: wealthInfluence.desc,
       careerScore: careerInfluence.score, careerDesc: careerInfluence.desc,
       god: getTenGod(dayPillar.stem, yPillar.stem), isCurrent: y === yearlyFocusYear,
+      // 交互数据
+      dayun: dayunStep ? `${dayunStep.stem}${dayunStep.branch}` : "—",
+      dayunGod: dayunStep ? dayunStep.god : "",
+      interaction: interaction,
     });
   }
 
@@ -1496,6 +1577,7 @@ function calculateFortune({ name, gender, birth, focus, birthplace }) {
   if (tiaohuoAdvice) summaryCopy += `\n【调候】${tiaohuoAdvice.desc.substring(0, 40)}...`;
   if (dayun) summaryCopy += `\n【大运】${dayun.desc}`;
   if (birthplaceAnalysis) summaryCopy += `\n出生于${regionInfo.city}（${regionInfo.element}），地域气场${birthplaceAnalysis.harmonyLabel}。`;
+  if (solarInfo) summaryCopy += `\n【真太阳时】${solarInfo.note}。`;
 
   const summaryTitle = `${name}的命盘深度解析`;
   const focusSection = FOCUS_GUIDE[focus] || FOCUS_GUIDE.overall;
@@ -1518,6 +1600,7 @@ function calculateFortune({ name, gender, birth, focus, birthplace }) {
 
   return {
     name, birth, gender, birthplace, birthplaceAnalysis, regionInfo,
+    originalBirth, solarInfo,
     pillars, counts, weightedCounts, dominant, weak, balance, dayElement,
     dayStem: dayPillar.stem, dayBranch: dayPillar.branch, yearNayin, dayNayin,
     summaryTitle, summaryCopy, overallConclusion, elementSummary,
@@ -1773,12 +1856,42 @@ function renderResult(result) {
   // 称骨算命已移除展示
   // const chengguSection = document.querySelector("#chenggu-section");
 
-  // 【新增】神煞系统
+  // 【新增】神煞系统（25神煞按类型分组展示）
   const shenshaSection = document.querySelector("#shensha-section");
   if (shenshaSection && result.shensha) {
     const ss = result.shensha;
     if (ss.length > 0) {
-      shenshaSection.innerHTML = `<div class="shensha-grid">${ss.map(s => `
+      // 按类型归类
+      const GROUPS = [
+        { key: "吉", label: "吉神贵人", icon: "✨", types: ["吉", "大吉"] },
+        { key: "喜", label: "喜庆星", icon: "🎊", types: ["喜"] },
+        { key: "桃花", label: "桃花情缘", icon: "🌸", types: ["桃花"] },
+        { key: "动", label: "变动星", icon: "🐎", types: ["动"] },
+        { key: "凶", label: "凶煞警示", icon: "⚠️", types: ["凶"] },
+        { key: "孤", label: "孤独星", icon: "🌘", types: ["孤"] },
+      ];
+      let html = "";
+      GROUPS.forEach(g => {
+        const list = ss.filter(s => g.types.includes(s.type));
+        if (list.length === 0) return;
+        html += `
+          <div class="shensha-group shensha-group-${g.key}">
+            <div class="shensha-group-title">${g.icon} ${g.label}（${list.length}）</div>
+            <div class="shensha-grid">
+              ${list.map(s => `
+                <div class="shensha-badge ${s.type}">
+                  <span class="shensha-icon">${s.icon}</span>
+                  <span class="shensha-name">${s.name}</span>
+                  ${s.pos ? `<span class="shensha-pos">${s.pos}</span>` : ''}
+                  <span class="shensha-type">${s.type}</span>
+                  <p class="shensha-desc">${s.desc}</p>
+                </div>
+              `).join("")}
+            </div>
+          </div>
+        `;
+      });
+      shenshaSection.innerHTML = html || `<div class="shensha-grid">${ss.map(s => `
         <div class="shensha-badge ${s.type}">
           <span class="shensha-icon">${s.icon}</span>
           <span class="shensha-name">${s.name}</span>
@@ -2125,6 +2238,7 @@ function renderResult(result) {
               <div class="yearly-header">
                 <span class="yearly-year">${yf.year}年</span>
                 <span class="yearly-gz">${yf.stem}${yf.branch}年</span>
+                ${yf.dayun && yf.dayun !== "—" ? `<span class="yearly-dayun-tag" title="所在大运">运·${yf.dayun}${yf.dayunGod ? `(${yf.dayunGod})` : ''}</span>` : ''}
                 ${yf.isCurrent ? `<span class="yearly-now-badge">${result.yearlyBadgeText}</span>` : ''}
               </div>
               <div class="yearly-body">
@@ -2161,6 +2275,14 @@ function renderResult(result) {
                   <p class="yearly-sub-desc"><span class="sub-desc-tag wealth-tag">财</span>${yf.wealthDesc}</p>
                   <p class="yearly-sub-desc"><span class="sub-desc-tag career-tag">业</span>${yf.careerDesc}</p>
                 </div>
+                ${yf.interaction && yf.interaction.events && yf.interaction.events.length > 0 ? `
+                  <div class="yearly-interaction">
+                    <div class="yearly-ix-title">🔗 大运×流年×命局 交互</div>
+                    <ul class="yearly-ix-list">
+                      ${yf.interaction.events.map(e => `<li>${e}</li>`).join("")}
+                    </ul>
+                  </div>
+                ` : ''}
               </div>
             </div>
           `;
