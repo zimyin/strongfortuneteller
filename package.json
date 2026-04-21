@@ -1,16 +1,25 @@
 {
-  "name": "wuxing-fortune-tool",
-  "version": "1.0.0",
+  "name": "gufa-fortune",
+  "version": "2.0.0",
+  "description": "古法推演神算 - 八字命理 + 紫微斗数深度测算工具",
   "private": true,
   "scripts": {
-    "dev": "python3 -m http.server 4173"
-  },
-  "dependencies": {
-    "jsdom": "^29.0.1"
+    "dev": "python3 -m http.server 4173 --directory src",
+    "build": "bash scripts/build.sh",
+    "deploy": "bash scripts/build.sh && bash scripts/deploy.sh",
+    "deploy:github": "bash scripts/build.sh && bash scripts/deploy.sh github",
+    "deploy:netlify": "bash scripts/build.sh && bash scripts/deploy.sh netlify",
+    "deploy:tcb": "bash scripts/build.sh && bash scripts/deploy.sh tcb",
+    "deploy:edgeone": "bash scripts/build.sh && bash scripts/deploy.sh edgeone",
+    "preview": "python3 -m http.server 8080 --directory dist",
+    "clean": "rm -rf dist"
   },
   "devDependencies": {
     "clean-css-cli": "^5.6.3",
     "html-minifier-terser": "^7.2.0",
     "uglify-js": "^3.19.3"
+  },
+  "engines": {
+    "node": ">=14"
   }
 }

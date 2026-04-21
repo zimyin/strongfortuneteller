@@ -379,14 +379,21 @@ const CHENGGU_FATE_FEMALE = {
 function calculateChenggu(pillars, birth, gender) {
   const yz = pillars[0].stem + pillars[0].branch;
   const yW = CHENGGU_YEAR[yz] || 0.8;
-  // 简化农历月
-  const sm = birth.getMonth() + 1, sd = birth.getDate();
-  const key = sm * 100 + sd;
-  let lm = 12;
-  if (key >= 204 && key < 306) lm = 1; else if (key >= 306 && key < 405) lm = 2; else if (key >= 405 && key < 506) lm = 3;
-  else if (key >= 506 && key < 606) lm = 4; else if (key >= 606 && key < 707) lm = 5; else if (key >= 707 && key < 808) lm = 6;
-  else if (key >= 808 && key < 908) lm = 7; else if (key >= 908 && key < 1008) lm = 8; else if (key >= 1008 && key < 1107) lm = 9;
-  else if (key >= 1107 && key < 1207) lm = 10; else if (key >= 1207 || key < 106) lm = 11; else lm = 12;
+  // 使用精确节气表推算农历月（复用 getSolarMonthOffset）
+  // getSolarMonthOffset 返回 0=寅月(正月) ... 11=丑月(腊月)
+  let lm;
+  if (typeof getSolarMonthOffset === "function") {
+    const offset = getSolarMonthOffset(birth);
+    lm = offset + 1; // 转为1=正月, 12=腊月
+  } else {
+    // Fallback: 近似推算
+    const sm = birth.getMonth() + 1, sd = birth.getDate();
+    const key = sm * 100 + sd;
+    if (key >= 204 && key < 306) lm = 1; else if (key >= 306 && key < 405) lm = 2; else if (key >= 405 && key < 506) lm = 3;
+    else if (key >= 506 && key < 606) lm = 4; else if (key >= 606 && key < 707) lm = 5; else if (key >= 707 && key < 808) lm = 6;
+    else if (key >= 808 && key < 908) lm = 7; else if (key >= 908 && key < 1008) lm = 8; else if (key >= 1008 && key < 1107) lm = 9;
+    else if (key >= 1107 && key < 1207) lm = 10; else if (key >= 1207 || key < 106) lm = 11; else lm = 12;
+  }
   const mW = CHENGGU_MONTH[lm] || 0.8;
   const dW = CHENGGU_DAY[birth.getDate()] || 0.8;
   const hW = CHENGGU_HOUR[pillars[3].branch] || 0.8;
@@ -459,4 +466,313 @@ function analyzeHealth(weightedCounts, usefulGod) {
     summary = "五行较为均衡，无明显健康隐患。日常保持规律作息、适量运动即可。";
   }
   return { warnings: uniqueWarns, summary };
+}
+
+/* ========================================================================
+ * 调候用神系统 — 基于《穷通宝鉴》
+ * 10天干 × 12节气月，给出精确的调候喜用神
+ * ======================================================================== */
+const TIAOHUO_TABLE = {
+  甲: {
+    寅: { use: "丙癸", desc: "初春甲木，余寒未尽。丙火解冻为先，癸水滋润为辅。有丙无癸，富而不贵；有癸无丙，贵而不富。" },
+    卯: { use: "庚丙", desc: "仲春甲木当令，枝叶繁茂。庚金修剪为先（伤官生财），丙火暖局为辅。庚丙两透，定主大贵。" },
+    辰: { use: "庚壬丙", desc: "暮春甲木退气，土旺。先庚后壬，庚劈甲引丁为用。无庚用壬水生木亦可。" },
+    巳: { use: "癸丁庚", desc: "初夏火旺木焚。癸水滋养为先，丁火泄秀为辅。见庚劈甲引丁，格局更高。" },
+    午: { use: "癸丁庚", desc: "仲夏烈火炎炎，甲木有焚之忧。癸水救焚为第一要务。无癸见壬亦可，但力量稍逊。" },
+    未: { use: "癸丁庚", desc: "季夏土旺火炎，甲木根基动摇。癸水救润为先，庚金辅佐为后。三伏生寒，最喜癸水。" },
+    申: { use: "丁庚丙", desc: "初秋金旺乘权克木。丁火制杀为先（食神制杀），庚金为辅。丁壬合化，须防化木不成。" },
+    酉: { use: "丁丙庚", desc: "仲秋金气肃杀，甲木受克严重。丁火制杀护身为要。无丁用丙亦可，但忌壬癸破丙。" },
+    戌: { use: "庚甲丁壬", desc: "季秋土旺用事，甲木困顿。先庚劈甲引丁，壬水滋润为辅。" },
+    亥: { use: "庚丁丙", desc: "初冬水旺木漂。庚金劈甲引丁为先，丙火照暖为辅。水多木漂，须有戊土制水。" },
+    子: { use: "庚丁丙", desc: "仲冬严寒水冻。丙火解冻为先，庚金劈甲引丁为辅。寒木向阳，丙火不可或缺。" },
+    丑: { use: "丙丁庚", desc: "季冬寒凝至极。丙火解冻第一，丁火温暖辅之。有丙透天干，必然显达。" },
+  },
+  乙: {
+    寅: { use: "丙癸", desc: "初春乙木嫩芽，寒气未退。丙火温暖为先，癸水雨露为辅。春乙向阳，丙透大吉。" },
+    卯: { use: "丙癸", desc: "仲春乙木得令，花开烂漫。丙癸并用，雨露阳光兼备，方成佳造。" },
+    辰: { use: "癸丙", desc: "暮春土旺，乙木根基受损。癸水滋润为先，丙火温暖为辅。" },
+    巳: { use: "癸丙", desc: "初夏火旺，乙木有枯萎之象。癸水滋润为要，不可一日无水。" },
+    午: { use: "癸丙", desc: "仲夏烈日炎炎，乙木焦灼。癸水为救命之源，见壬亦可。" },
+    未: { use: "癸丙", desc: "季夏燥土当令，乙木根浮。癸水不可缺，丙火酌用。" },
+    申: { use: "丙癸己", desc: "初秋金旺克木。丙火制金护木为先，癸水滋养为辅。" },
+    酉: { use: "丙癸己", desc: "仲秋金气太过，乙木凋零。丙火回阳制杀为要，癸水辅之。" },
+    戌: { use: "癸辛丙", desc: "季秋土旺，乙木困。癸水润木为先，丙火温暖为辅。" },
+    亥: { use: "丙戊", desc: "初冬水多木漂。丙火照暖为先，戊土止水为辅。" },
+    子: { use: "丙戊", desc: "仲冬水旺木寒。丙火不可缺，戊土制水亦重要。" },
+    丑: { use: "丙", desc: "季冬寒极。丙火解冻为第一要务。有丙透干，寒木回春。" },
+  },
+  丙: {
+    寅: { use: "壬庚", desc: "初春丙火初生，寒气犹存。壬水财星辉映为贵，庚金生壬为辅。" },
+    卯: { use: "壬己", desc: "仲春木旺生火太过。壬水制火为先，己土晦火为辅。" },
+    辰: { use: "壬甲", desc: "暮春火进气，土旺泄秀。壬水财星为用，甲木印星辅之。" },
+    巳: { use: "壬庚", desc: "初夏丙火当令，烈焰腾空。壬水制火为要。庚金生壬辅之。" },
+    午: { use: "壬庚", desc: "仲夏丙火极旺，须壬水救济。壬庚并透，富贵双全。" },
+    未: { use: "壬庚", desc: "季夏火土燥烈。壬水润局为第一。无壬见癸亦可。" },
+    申: { use: "壬甲", desc: "初秋丙火渐退，金水进气。壬水得令生财，甲木印星护身。" },
+    酉: { use: "壬甲", desc: "仲秋金旺泄气。壬水为财，甲木为印，二者兼用。" },
+    戌: { use: "壬甲", desc: "季秋土旺晦火。壬水涤荡为先，甲木疏土为辅。" },
+    亥: { use: "甲壬戊", desc: "初冬水旺克火。甲木化杀生身为要。戊土制水亦可。" },
+    子: { use: "甲壬戊", desc: "仲冬水旺火弱。甲木通关为先，戊土制水为辅。" },
+    丑: { use: "壬甲", desc: "季冬寒湿。甲木生火，壬水辉映。调候与通关并重。" },
+  },
+  丁: {
+    寅: { use: "甲庚", desc: "初春丁火微弱。甲木生火为第一要务。庚劈甲引丁，格局更高。" },
+    卯: { use: "甲庚", desc: "仲春木旺可生丁。甲庚并用，甲木为薪，庚金劈甲，火势乃旺。" },
+    辰: { use: "甲庚", desc: "暮春土旺泄火。甲木印星为用，庚金辅之。" },
+    巳: { use: "甲庚壬", desc: "初夏丙夺丁光。甲木为用，壬水制丙护丁。" },
+    午: { use: "壬甲庚", desc: "仲夏火旺丁弱（丙夺丁辉）。壬水制丙为先，甲木辅之。" },
+    未: { use: "甲壬庚", desc: "季夏燥土泄火。甲木生身为先，壬水润局为辅。" },
+    申: { use: "甲庚丙", desc: "初秋金旺泄火。甲木生身，庚劈甲引丁。丙火助势。" },
+    酉: { use: "甲庚丙", desc: "仲秋金旺克木，丁火无根。甲庚并用为急。" },
+    戌: { use: "甲庚丙", desc: "季秋土旺晦火。甲木疏土生火为先。" },
+    亥: { use: "甲庚", desc: "初冬水旺克火。甲木通关生火为要。庚劈甲引丁。" },
+    子: { use: "甲庚", desc: "仲冬寒水冻丁。甲木不可缺，庚金辅之。" },
+    丑: { use: "甲庚", desc: "季冬湿寒极重。甲庚为第一用神。" },
+  },
+  戊: {
+    寅: { use: "丙甲癸", desc: "初春寒土冻结。丙火暖土为先，甲木疏土为辅。" },
+    卯: { use: "丙甲癸", desc: "仲春木旺克土。丙火通关（木生火生土）为要，甲木疏土辅之。" },
+    辰: { use: "甲丙癸", desc: "暮春戊土当令。甲木疏土为先，不使土太厚。丙火辅暖。" },
+    巳: { use: "甲丙癸", desc: "初夏火旺生土太过。甲木疏松为用，癸水润土辅之。" },
+    午: { use: "壬甲丙", desc: "仲夏火炎土燥。壬水润局为先，甲木疏土为辅。" },
+    未: { use: "癸甲丙", desc: "季夏燥土极旺。癸水润泽为第一，甲木疏土为第二。" },
+    申: { use: "丙癸甲", desc: "初秋金旺泄土。丙火生土制金为用。癸水辅之。" },
+    酉: { use: "丙癸", desc: "仲秋金旺泄气。丙火暖身生土为先。" },
+    戌: { use: "甲丙癸", desc: "季秋土旺重叠。甲木疏土为急。丙癸辅之。" },
+    亥: { use: "甲丙", desc: "初冬水旺克火弱土。丙火暖局为先，甲木疏土为辅。" },
+    子: { use: "丙甲", desc: "仲冬严寒。丙火解冻第一。甲木佐之。" },
+    丑: { use: "丙甲", desc: "季冬寒凝。丙火为第一用神。" },
+  },
+  己: {
+    寅: { use: "丙甲癸", desc: "初春己土卑湿。丙火暖土为先，甲木疏土为辅。" },
+    卯: { use: "丙甲癸", desc: "仲春木旺克土。丙火通关为要，甲木疏土。" },
+    辰: { use: "甲丙癸", desc: "暮春土旺。甲木疏松为先，丙癸辅用。" },
+    巳: { use: "癸丙", desc: "初夏火旺土燥。癸水润土为先，丙火酌用。" },
+    午: { use: "癸丙", desc: "仲夏极热。癸水救润为要。无癸见壬亦可。" },
+    未: { use: "癸丙", desc: "季夏燥极。癸水第一要务。" },
+    申: { use: "丙癸", desc: "初秋金旺泄土。丙火生土为用，癸水辅之。" },
+    酉: { use: "丙癸", desc: "仲秋金旺。丙火暖局生土为先。" },
+    戌: { use: "甲丙癸", desc: "季秋土重。甲木疏土为急，丙癸辅助。" },
+    亥: { use: "丙甲", desc: "初冬水旺。丙火暖局为先。" },
+    子: { use: "丙甲", desc: "仲冬严寒。丙火第一。" },
+    丑: { use: "丙甲", desc: "季冬极寒。丙火解冻不可缺。" },
+  },
+  庚: {
+    寅: { use: "丙甲丁", desc: "初春庚金寒冻。丙火暖金为先，甲木引丁炼金为辅。" },
+    卯: { use: "丁甲丙", desc: "仲春木旺。丁火炼金为先（百炼成钢），甲木引丁。" },
+    辰: { use: "甲丁壬", desc: "暮春土旺生金。甲木疏土为先，丁火炼金为辅。" },
+    巳: { use: "壬丙戊", desc: "初夏火旺金弱。壬水洗淘为先，使金更光洁。" },
+    午: { use: "壬癸", desc: "仲夏烈火熔金。壬水救金为第一要务。" },
+    未: { use: "丁甲", desc: "季夏土旺晦金。丁火炼金为先，甲木疏土为辅。" },
+    申: { use: "丁甲壬", desc: "初秋庚金当令。丁火锻炼为先，甲木引丁，壬水洗淘。" },
+    酉: { use: "丁甲丙", desc: "仲秋金旺。丁火炼金为要，甲劈引丁。" },
+    戌: { use: "甲壬", desc: "季秋土旺埋金。甲木疏土为先，壬水洗金为辅。" },
+    亥: { use: "丁甲丙", desc: "初冬水旺金寒。丁火炼暖为先，丙火辅之。" },
+    子: { use: "丁甲丙", desc: "仲冬寒极。丁火不可缺，甲木引丁。" },
+    丑: { use: "丁甲丙", desc: "季冬湿寒。丁甲为第一组合。丙火解冻辅之。" },
+  },
+  辛: {
+    寅: { use: "壬甲丙", desc: "初春辛金柔弱。壬水洗淘为先，使辛金光洁。丙火暖局辅之。" },
+    卯: { use: "壬甲", desc: "仲春木旺克金。壬水泄金通关为要。" },
+    辰: { use: "壬甲", desc: "暮春土旺生金。壬水洗淘为先，甲木疏土为辅。" },
+    巳: { use: "壬甲癸", desc: "初夏火旺金衰。壬水淘洗为先。癸水辅助。" },
+    午: { use: "壬癸己", desc: "仲夏烈火熔金。壬癸救命为要。己土生金辅之。" },
+    未: { use: "壬甲", desc: "季夏燥土。壬水润局为先，甲木疏土为辅。" },
+    申: { use: "壬甲", desc: "初秋辛金得助。壬水泄秀为先（秀气流行），甲木辅用。" },
+    酉: { use: "壬甲", desc: "仲秋辛金极旺。壬水泄秀为第一要务。" },
+    戌: { use: "壬甲", desc: "季秋土旺。壬甲并用。" },
+    亥: { use: "丙壬甲", desc: "初冬水旺。丙火暖局为先，壬水辅用。" },
+    子: { use: "丙壬甲", desc: "仲冬寒极。丙火解冻为第一。" },
+    丑: { use: "丙壬甲", desc: "季冬极寒。丙火不可缺。" },
+  },
+  壬: {
+    寅: { use: "庚丙", desc: "初春壬水退气。庚金生水为源头（印星为用），丙火暖局辅之。" },
+    卯: { use: "庚辛", desc: "仲春木旺泄水。庚辛金生水为先（印绶护身）。" },
+    辰: { use: "甲庚", desc: "暮春土旺克水。甲木制土为先，庚金生水为辅。" },
+    巳: { use: "庚辛壬", desc: "初夏火旺水弱。庚辛生水为急。壬水比劫助力。" },
+    午: { use: "庚辛癸", desc: "仲夏烈火蒸水。庚辛金源源生水为第一。" },
+    未: { use: "庚辛甲", desc: "季夏燥土克水。庚辛生水，甲木制土。" },
+    申: { use: "戊丁", desc: "初秋金旺生水太过。戊土制水为先，丁火制金为辅。" },
+    酉: { use: "甲戊", desc: "仲秋金旺。甲木疏土泄水为用，戊土制水辅之。" },
+    戌: { use: "甲丙", desc: "季秋土旺克水。甲木制土为先，丙火暖局。" },
+    亥: { use: "戊丙甲", desc: "初冬壬水当令。戊土堤防为先，丙火暖局为辅。" },
+    子: { use: "戊丙", desc: "仲冬水旺极。戊土制水为第一，丙火暖局辅之。" },
+    丑: { use: "丙甲", desc: "季冬寒湿。丙火解冻为先，甲木疏土辅之。" },
+  },
+  癸: {
+    寅: { use: "辛丙", desc: "初春癸水弱。辛金发水源为先（印星生身），丙火暖局为辅。" },
+    卯: { use: "庚辛", desc: "仲春木旺泄水。庚辛金生水为要。" },
+    辰: { use: "丙辛甲", desc: "暮春土旺克水。辛金生水为先，丙火暖局辅之，甲木制土。" },
+    巳: { use: "辛甲", desc: "初夏火旺水涸。辛金发源为急。甲木辅用。" },
+    午: { use: "庚辛壬癸", desc: "仲夏烈火极旺。金水齐来方能救。庚辛生水第一。" },
+    未: { use: "庚辛", desc: "季夏燥土。庚辛金生水为要。" },
+    申: { use: "丁", desc: "初秋金旺生水。丁火制金为先（食神制杀理）。" },
+    酉: { use: "丁丙甲", desc: "仲秋金旺。丁火制金为先，丙火辅暖。" },
+    戌: { use: "辛甲丙", desc: "季秋土旺。辛金生水，甲木制土，丙火暖局。" },
+    亥: { use: "戊丙庚", desc: "初冬水旺。戊土制水为先，丙火暖局为辅。" },
+    子: { use: "丙辛", desc: "仲冬极寒。丙火解冻为第一。辛金辅之。" },
+    丑: { use: "丙辛", desc: "季冬寒极。丙火解冻不可或缺。" },
+  },
+};
+
+/* 获取调候用神建议 */
+function getTiaohuoAdvice(dayStem, monthBranch) {
+  const stemData = TIAOHUO_TABLE[dayStem];
+  if (!stemData) return null;
+  const monthData = stemData[monthBranch];
+  if (!monthData) return null;
+  return {
+    useGods: monthData.use.split(""),
+    desc: monthData.desc,
+    monthBranch,
+    dayStem,
+  };
+}
+
+/* ========================================================================
+ * 十二长生宫 — 基于《三命通会》
+ * 五行在十二地支中的旺衰状态
+ * ======================================================================== */
+const TWELVE_STAGES = ["长生", "沐浴", "冠带", "临官", "帝旺", "衰", "病", "死", "墓", "绝", "胎", "养"];
+
+const TWELVE_STAGE_MEANINGS = {
+  长生: { icon: "🌱", brief: "萌芽新生", detail: "如人之初生，万物发端，主聪明好学、有创造力。逢长生运主新机遇、新开始。" },
+  沐浴: { icon: "🛁", brief: "脆弱波动", detail: "如婴儿沐浴，尚不自立。主桃花旺、多变动、感情波折。又名败地、咸池。" },
+  冠带: { icon: "👑", brief: "成长渐强", detail: "如人成年加冠，开始独立。主有进取心、事业起步、渐露头角。" },
+  临官: { icon: "🏛️", brief: "建功立业", detail: "如人入仕做官，事业鼎盛。主有地位、收入稳定、社会认可。又名建禄。" },
+  帝旺: { icon: "⭐", brief: "巅峰极盛", detail: "如帝王在位，权势最大。主精力充沛、事业巅峰，但盛极必衰，宜守不宜进。" },
+  衰: { icon: "🍂", brief: "由盛转衰", detail: "如人年迈，精力渐退。主保守、稳重，适合守成。身体需注意保养。" },
+  病: { icon: "🤒", brief: "力量不足", detail: "如人染疾，活力下降。主做事力不从心，需要休养调整，不宜冒进。" },
+  死: { icon: "💀", brief: "气息全无", detail: "如物之死灭，五行力量归零。但命理中死≠凶，主沉静、内敛、有玄学天赋。" },
+  墓: { icon: "⚱️", brief: "收藏入库", detail: "如物入墓库收藏。主有积蓄、能守财，但也有封闭保守的倾向。墓库逢冲则开。" },
+  绝: { icon: "🌑", brief: "气息断绝", detail: "旧气已绝，新气将孕。主置之死地而后生，逢绝处反有转机。" },
+  胎: { icon: "🤰", brief: "孕育新生", detail: "如在母胎中孕育。主有计划、在酝酿中，尚未显现。蓄势待发之象。" },
+  养: { icon: "🍼", brief: "蓄养待时", detail: "如母养育胎儿，万事待时。主得人照顾、有贵人缘，但尚未独立。" },
+};
+
+/* 五行长生起始地支（阳干顺行，阴干逆行）
+ * 阳干: 甲长生在亥, 丙戊长生在寅, 庚长生在巳, 壬长生在申
+ * 阴干: 乙长生在午, 丁己长生在酉, 辛长生在子, 癸长生在卯 */
+const CHANGSHENG_START = {
+  甲: { start: 11, dir: 1 },  // 亥=11, 顺行
+  乙: { start: 6, dir: -1 },  // 午=6, 逆行
+  丙: { start: 2, dir: 1 },   // 寅=2, 顺行
+  丁: { start: 9, dir: -1 },  // 酉=9, 逆行
+  戊: { start: 2, dir: 1 },   // 寅=2, 顺行（同丙）
+  己: { start: 9, dir: -1 },  // 酉=9, 逆行（同丁）
+  庚: { start: 5, dir: 1 },   // 巳=5, 顺行
+  辛: { start: 0, dir: -1 },  // 子=0, 逆行
+  壬: { start: 8, dir: 1 },   // 申=8, 顺行
+  癸: { start: 3, dir: -1 },  // 卯=3, 逆行
+};
+
+/* 计算日主在各地支的十二长生状态 */
+function getTwelveStage(dayStem, branch) {
+  const cfg = CHANGSHENG_START[dayStem];
+  if (!cfg) return null;
+  const branchIdx = BRANCHES.indexOf(branch);
+  const offset = cfg.dir === 1
+    ? safeMod(branchIdx - cfg.start, 12)
+    : safeMod(cfg.start - branchIdx, 12);
+  const stage = TWELVE_STAGES[offset];
+  return { stage, ...TWELVE_STAGE_MEANINGS[stage] };
+}
+
+/* 获取四柱的十二长生状态 */
+function analyzeTwelveStages(pillars, dayStem) {
+  const names = ["年支", "月支", "日支", "时支"];
+  const stages = pillars.map((p, i) => {
+    const info = getTwelveStage(dayStem, p.branch);
+    return { position: names[i], branch: p.branch, ...info };
+  });
+
+  // 找出最旺和最弱的宫位
+  const stageOrder = { 帝旺: 5, 临官: 4, 冠带: 3, 长生: 3, 养: 2, 胎: 1, 沐浴: 1, 衰: -1, 病: -2, 死: -3, 墓: -2, 绝: -3 };
+  let summary = `日主${dayStem}在四柱地支的长生状态：`;
+  stages.forEach(s => {
+    summary += `${s.position}${s.branch}为"${s.stage}"；`;
+  });
+  const strongStages = stages.filter(s => ["帝旺", "临官", "冠带", "长生"].includes(s.stage));
+  const weakStages = stages.filter(s => ["死", "绝", "墓", "病"].includes(s.stage));
+  if (strongStages.length >= 2) summary += `日主逢多处旺地，根基深厚。`;
+  else if (weakStages.length >= 2) summary += `日主逢多处弱地，需后天补强。`;
+
+  return { stages, summary };
+}
+
+/* ========================================================================
+ * 大运排盘 — 基于《渊海子平》
+ * 阳男阴女顺行，阴男阳女逆行
+ * 从月柱起，每步大运10年
+ * ======================================================================== */
+function calculateDaYun(pillars, gender, birth) {
+  const yearStem = pillars[0].stem;
+  const monthStem = pillars[1].stem;
+  const monthBranch = pillars[1].branch;
+
+  // 判断顺逆: 阳男阴女顺行，阴男阳女逆行
+  const yearYinYang = STEM_YIN_YANG[yearStem]; // "阳" 或 "阴"
+  const isMale = gender === "male";
+  const isForward = (yearYinYang === "阳" && isMale) || (yearYinYang === "阴" && !isMale);
+
+  // 计算起运年龄（从出生日到下一个/上一个节气的天数÷3）
+  // 简化: 用月柱节气月中间值估算
+  const birthDay = birth.getDate();
+  // 近似: 每月约30天，取中间值15天作为节气点
+  const daysToJieqi = isForward ? Math.max(1, 30 - birthDay) : Math.max(1, birthDay);
+  const startAge = Math.max(1, Math.round(daysToJieqi / 3));
+
+  // 月柱的干支索引
+  const monthStemIdx = STEMS.indexOf(monthStem);
+  const monthBranchIdx = BRANCHES.indexOf(monthBranch);
+
+  // 排8步大运
+  const steps = [];
+  for (let i = 1; i <= 8; i++) {
+    const offset = isForward ? i : -i;
+    const stemIdx = safeMod(monthStemIdx + offset, 10);
+    const branchIdx = safeMod(monthBranchIdx + offset, 12);
+    const stem = STEMS[stemIdx];
+    const branch = BRANCHES[branchIdx];
+    const ageStart = startAge + (i - 1) * 10;
+    const ageEnd = ageStart + 9;
+    const yearStart = birth.getFullYear() + ageStart;
+    const yearEnd = birth.getFullYear() + ageEnd;
+
+    // 大运天干十神
+    const dayStem = pillars[2].stem;
+    const god = getTenGod(dayStem, stem);
+
+    // 大运地支与日主的十二长生
+    const stageInfo = getTwelveStage(dayStem, branch);
+
+    // 评分
+    const dayEl = STEM_ELEMENTS[dayStem];
+    const yunEl = STEM_ELEMENTS[stem];
+    let score = 65;
+    // 用神喜忌判断（简化版）
+    if (yunEl === dayEl || ELEMENT_GENERATED_BY[dayEl] === yunEl) score += 12;
+    if (ELEMENT_OVERCOME_BY[dayEl] === yunEl) score -= 8;
+    if (stageInfo && ["帝旺", "临官", "冠带", "长生"].includes(stageInfo.stage)) score += 8;
+    if (stageInfo && ["死", "绝", "病"].includes(stageInfo.stage)) score -= 6;
+    score = Math.min(92, Math.max(38, score));
+
+    const isGood = score >= 72;
+    const isCaution = score < 55;
+
+    steps.push({
+      stem, branch, element: STEM_ELEMENTS[stem],
+      ageStart, ageEnd, yearStart, yearEnd,
+      god, stage: stageInfo ? stageInfo.stage : "",
+      score, isGood, isCaution,
+      desc: `${god}运，地支${branch}为${stageInfo ? stageInfo.stage : "—"}`,
+    });
+  }
+
+  return {
+    direction: isForward ? "顺行" : "逆行",
+    startAge,
+    steps,
+    desc: `${yearYinYang}年${isMale ? "男" : "女"}命，大运${isForward ? "顺行" : "逆行"}，${startAge}岁起运。`,
+  };
 }

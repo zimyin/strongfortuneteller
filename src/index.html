@@ -38,7 +38,7 @@
           <span class="hero-badge">AI 问答</span>
         </div>
       </header>
-      <p class="copyright-text">版权所有：城中村分析师</p>
+      <p class="copyright-text">版权所有：城中村女大学生</p>
 
       <main class="layout-grid">
         <!-- 左侧输入面板 -->
@@ -93,12 +93,11 @@
             </label>
 
             <button class="primary-button" type="submit">开始深度测算</button>
-            <button class="vip-button" type="button" id="open-pay-btn">解锁紫微斗数完整版 · ¥1</button>
           </form>
 
           <div class="notice-card">
             <p>
-              本神算融入了《渊海子平》、《三命通会》、《紫微斗数全书》、《穷通宝鉴》等经典命理古籍
+              本神算融入了《渊海子平》、《三命通会》、《紫微斗数全书》、《穷通宝鉴》、《子平真诠》、《滴天髓》、《协纪辨方书》、《神峰通考》、《称骨歌》、《黄帝内经》等数十本经典命理古籍
             </p>
           </div>
         </section>
@@ -170,6 +169,24 @@
                 <p>根据身强身弱确定命局喜忌五行，指导趋吉避凶。</p>
               </div>
               <div id="usegod-section"></div>
+            </section>
+
+            <!-- 【新增】调候用神 -->
+            <section class="subsection">
+              <div class="subsection-heading">
+                <h3>调候用神</h3>
+                <p>基于《穷通宝鉴》，根据日主天干与出生月份，给出因时制宜的精准调候建议。</p>
+              </div>
+              <div id="tiaohuo-section"></div>
+            </section>
+
+            <!-- 【新增】十二长生 -->
+            <section class="subsection">
+              <div class="subsection-heading">
+                <h3>十二长生宫</h3>
+                <p>日主在四柱地支的旺衰状态——长生、沐浴、冠带、临官、帝旺、衰、病、死、墓、绝、胎、养。</p>
+              </div>
+              <div id="twelve-stages-section"></div>
             </section>
 
             <!-- 【新增】合冲刑害 -->
@@ -281,11 +298,20 @@
               </article>
             </section>
 
+            <!-- 【新增】大运排盘 -->
+            <section class="subsection">
+              <div class="subsection-heading">
+                <h3>大运排盘</h3>
+                <p>每十年一步大运，揭示人生不同阶段的运势主题与机遇挑战。</p>
+              </div>
+              <div id="dayun-section"></div>
+            </section>
+
             <!-- 流年运势 -->
             <section class="subsection">
               <div class="subsection-heading">
-                <h3>流年运势（2015-2030）</h3>
-                <p>结合你的日主五行与每年天干五行，查看 2015-2030 年的评分与运势走向。</p>
+                <h3>流年运势（2015-2035）</h3>
+                <p>结合你的日主五行与每年天干五行，查看 2015-2035 年的评分与运势走向。</p>
               </div>
               <div id="yearly-section"></div>
             </section>
@@ -393,66 +419,44 @@
       <p class="home-div-tip">完成上方「深度测算」后，占卜结果将融合你的八字五行，解读更精准。</p>
     </section>
 
-    <!-- 支付弹窗 -->
-    <div class="pay-overlay hidden" id="pay-overlay">
-      <div class="pay-modal">
-        <button class="pay-close-btn" id="pay-close-btn">&times;</button>
-        <div class="pay-header">
-          <div class="pay-icon">★</div>
-          <h2>解锁完整紫微斗数命盘</h2>
-          <p>包含十二宫详解、四化飞星、大运流年全分析</p>
-        </div>
-        <div class="pay-plans">
-          <div class="pay-plan active" data-price="1">
-            <span class="pay-plan-tag">推荐</span>
-            <h3>单次测算</h3>
-            <div class="pay-price">¥<strong>1</strong></div>
-            <p>一次完整的紫微斗数命盘解析</p>
-          </div>
-          <div class="pay-plan" data-price="10">
-            <span class="pay-plan-tag hot">超值</span>
-            <h3>年度会员</h3>
-            <div class="pay-price">¥<strong>10</strong></div>
-            <p>全年无限次测算 + AI 深度问答</p>
-          </div>
-        </div>
-        <div class="pay-method">
-          <p class="pay-method-label">选择支付方式</p>
-          <div class="pay-method-options">
-            <button class="pay-method-btn active" data-method="alipay">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="6" fill="#1677FF"/><path d="M18.5 14.2c-1.2-.5-2.8-1.2-4.5-1.8.7-1.3 1.2-2.8 1.5-4.4h-3v-1.5h3.8V5.2h-3.8V3.5h-1.8v1.7H7v1.3h3.7v1.5H7.5v1.3h5.8c-.2 1.2-.7 2.3-1.2 3.2-2-.5-4.1-.8-5.1-.3-1.8.8-2.4 2.5-1.6 3.8.8 1.3 3 1.7 4.8.5.9-.6 1.7-1.5 2.3-2.7 1.8.7 3.4 1.3 4.6 1.8L18.5 14.2zM8 17.5c-1.2.5-2.5.2-2.9-.6-.4-.8.1-1.8 1.3-2.2.6-.2 1.5-.1 2.8.3C8.8 16.1 8.4 16.9 8 17.5z" fill="white"/></svg>
-              支付宝
-            </button>
-          </div>
-        </div>
-        <button class="pay-submit-btn" id="pay-submit-btn">
-          <span id="pay-btn-text">立即支付 ¥1</span>
-        </button>
-        <p class="pay-secure">安全支付 · 支付后即刻解锁</p>
-      </div>
-    </div>
 
     <!-- 赛博朋克粒子背景动画 -->
     <script>
     (function() {
-      const canvas = document.getElementById('cyber-particles');
+      var canvas = document.getElementById('cyber-particles');
       if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      let W, H, particles = [], mouse = { x: -999, y: -999 };
-      const PARTICLE_COUNT = 60;
-      const CONNECT_DIST = 120;
+      // 尊重用户减少动画偏好
+      if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        canvas.style.display = 'none';
+        return;
+      }
+      var ctx = canvas.getContext('2d');
+      var W, H, particles = [], mouse = { x: -999, y: -999 };
+      var isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      var isSmallScreen = window.innerWidth < 768;
+      // 移动端/小屏减少粒子数和连线距离以提升性能
+      var PARTICLE_COUNT = (isMobile || isSmallScreen) ? 20 : 60;
+      var CONNECT_DIST = (isMobile || isSmallScreen) ? 80 : 120;
+      var rafId = null;
 
       function resize() {
         W = canvas.width = window.innerWidth;
         H = canvas.height = window.innerHeight;
       }
       resize();
-      window.addEventListener('resize', resize);
-
-      document.addEventListener('mousemove', function(e) {
-        mouse.x = e.clientX;
-        mouse.y = e.clientY;
+      var resizeTimer;
+      window.addEventListener('resize', function() {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(resize, 200);
       });
+
+      // 仅在非触屏设备启用鼠标交互
+      if (!isMobile) {
+        document.addEventListener('mousemove', function(e) {
+          mouse.x = e.clientX;
+          mouse.y = e.clientY;
+        });
+      }
 
       function Particle() {
         this.x = Math.random() * W;
@@ -476,43 +480,53 @@
           if (p.x < 0 || p.x > W) p.vx *= -1;
           if (p.y < 0 || p.y > H) p.vy *= -1;
 
-          // 粒子
           ctx.beginPath();
           ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
           ctx.fillStyle = p.color + '0.5)';
           ctx.fill();
 
-          // 连线
-          for (var j = i + 1; j < particles.length; j++) {
-            var p2 = particles[j];
-            var dx = p.x - p2.x, dy = p.y - p2.y;
-            var dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < CONNECT_DIST) {
-              var alpha = (1 - dist / CONNECT_DIST) * 0.15;
+          // 连线（移动端跳过以节省性能）
+          if (!isMobile) {
+            for (var j = i + 1; j < particles.length; j++) {
+              var p2 = particles[j];
+              var dx = p.x - p2.x, dy = p.y - p2.y;
+              var dist = Math.sqrt(dx * dx + dy * dy);
+              if (dist < CONNECT_DIST) {
+                var alpha = (1 - dist / CONNECT_DIST) * 0.15;
+                ctx.beginPath();
+                ctx.moveTo(p.x, p.y);
+                ctx.lineTo(p2.x, p2.y);
+                ctx.strokeStyle = 'rgba(0,212,255,' + alpha + ')';
+                ctx.lineWidth = 0.5;
+                ctx.stroke();
+              }
+            }
+
+            var dmx = mouse.x - p.x, dmy = mouse.y - p.y;
+            var mDist = Math.sqrt(dmx * dmx + dmy * dmy);
+            if (mDist < 150) {
+              var alpha2 = (1 - mDist / 150) * 0.2;
               ctx.beginPath();
               ctx.moveTo(p.x, p.y);
-              ctx.lineTo(p2.x, p2.y);
-              ctx.strokeStyle = 'rgba(0,212,255,' + alpha + ')';
+              ctx.lineTo(mouse.x, mouse.y);
+              ctx.strokeStyle = 'rgba(178,75,243,' + alpha2 + ')';
               ctx.lineWidth = 0.5;
               ctx.stroke();
             }
           }
-
-          // 鼠标吸引
-          var dmx = mouse.x - p.x, dmy = mouse.y - p.y;
-          var mDist = Math.sqrt(dmx * dmx + dmy * dmy);
-          if (mDist < 150) {
-            var alpha2 = (1 - mDist / 150) * 0.2;
-            ctx.beginPath();
-            ctx.moveTo(p.x, p.y);
-            ctx.lineTo(mouse.x, mouse.y);
-            ctx.strokeStyle = 'rgba(178,75,243,' + alpha2 + ')';
-            ctx.lineWidth = 0.5;
-            ctx.stroke();
-          }
         }
-        requestAnimationFrame(draw);
+        rafId = requestAnimationFrame(draw);
       }
+
+      // 页面不可见时暂停动画以节省资源
+      document.addEventListener('visibilitychange', function() {
+        if (document.hidden) {
+          if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+        } else {
+          if (!rafId) draw();
+        }
+      });
+
       draw();
     })();
     </script>

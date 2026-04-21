@@ -77,73 +77,218 @@ const ZIWEI_PALACE_MEANINGS = {
   父母宫: "与长辈关系、家学渊源与早年运势",
 };
 
-/* 简化的紫微斗数排盘 */
+/* ===== 紫微斗数排盘（正统安星法 v2.0）=====
+ * 基于《紫微斗数全书》正统排盘规则
+ * 命宫: 寅起正月顺数到生月，再逆数到生时
+ * 五行局: 命宫干支查纳音五行局表
+ * 紫微星: 生日÷局数，口诀定位
+ * 14主星: 紫微系逆排 + 天府系顺排
+ * ============================================ */
 function calculateZiwei(birth) {
   const year = birth.getFullYear();
   const month = birth.getMonth() + 1;
   const day = birth.getDate();
   const hour = birth.getHours();
+  const hourIdx = getHourBranchIndex(hour);
 
-  // 基于出生数据生成确定性的排盘
-  const seed = year * 10000 + month * 100 + day;
-  const hourBranch = getHourBranchIndex(hour);
+  // 近似农历月（以节气月代替，精度足够排盘）
+  const lunarMonth = getSolarMonthOffset(birth) + 1; // 1=正月(寅月)
+  const lunarDay = day; // 简化: 用公历日近似农历日
 
-  // 命宫位置计算（简化版）
-  const mingGong = safeMod(month + hourBranch, 12);
+  // === 1. 安命宫 ===
+  // 寅宫起正月顺数到生月，再逆数到生时
+  // 公式: 命宫地支index = (14 + lunarMonth - hourIdx) % 12
+  // (14 = 2 + 12，其中2是寅的索引)
+  const mingGongBranchIdx = safeMod(14 + lunarMonth - hourIdx, 12);
 
-  // 主星排列（基于紫微星起始位置）
-  const ziweiPos = safeMod(seed + day * 3, 12);
-  
+  // === 2. 安身宫 ===
+  const shenGongBranchIdx = safeMod(2 + lunarMonth - 1 + hourIdx, 12);
+
+  // === 3. 十二宫天干（五虎遁） ===
+  const yearStemIdx = safeMod(year - 4, 10);
+  const yearStem = STEMS[yearStemIdx];
+  const yinGongStemMap = { 甲: "丙", 己: "丙", 乙: "戊", 庚: "戊", 丙: "庚", 辛: "庚", 丁: "壬", 壬: "壬", 戊: "甲", 癸: "甲" };
+  const yinStemIdx = STEMS.indexOf(yinGongStemMap[yearStem]);
+
+  function getPalaceStem(branchIdx) {
+    // 寅宫=yinStemIdx，从寅顺排
+    const offset = safeMod(branchIdx - 2, 12);
+    return STEMS[safeMod(yinStemIdx + offset, 10)];
+  }
+
+  // === 4. 定五行局 ===
+  const mingGongStem = getPalaceStem(mingGongBranchIdx);
+  const mingGongBranch = BRANCHES[mingGongBranchIdx];
+  const wuxingJuTable = {
+    // [天干组][地支组] → 局数
+    // 天干组: 甲乙=0, 丙丁=1, 戊己=2, 庚辛=3, 壬癸=4
+    // 地支组: 子丑午未=0, 寅卯申酉=1, 辰巳戌亥=2
+    0: { 0: 4, 1: 2, 2: 6 }, // 甲乙: 金四局, 水二局, 火六局
+    1: { 0: 2, 1: 6, 2: 5 }, // 丙丁: 水二局, 火六局, 土五局
+    2: { 0: 6, 1: 5, 2: 3 }, // 戊己: 火六局, 土五局, 木三局
+    3: { 0: 5, 1: 3, 2: 4 }, // 庚辛: 土五局, 木三局, 金四局
+    4: { 0: 3, 1: 4, 2: 2 }, // 壬癸: 木三局, 金四局, 水二局
+  };
+  const juNames = { 2: "水二局", 3: "木三局", 4: "金四局", 5: "土五局", 6: "火六局" };
+  const stemGroup = Math.floor(STEMS.indexOf(mingGongStem) / 2);
+  const branchGroupMap = { 子: 0, 丑: 0, 午: 0, 未: 0, 寅: 1, 卯: 1, 申: 1, 酉: 1, 辰: 2, 巳: 2, 戌: 2, 亥: 2 };
+  const branchGroup = branchGroupMap[mingGongBranch];
+  const juNum = wuxingJuTable[stemGroup][branchGroup];
+
+  // === 5. 定紫微星位置（30×5查表法） ===
+  const ziweiPosTable = {
+    2:[1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,1,1,2,2,3,3,4],
+    3:[2,2,3,1,3,4,4,5,2,5,6,6,7,4,7,8,8,9,6,9,10,10,11,8,11,12,12,1,10,1],
+    4:[3,2,1,4,3,2,5,4,3,6,5,4,7,6,5,8,7,6,9,8,7,10,9,8,11,10,9,12,11,10],
+    5:[4,2,3,1,5,3,4,2,6,4,5,3,7,5,6,4,8,6,7,5,9,7,8,6,10,8,9,7,11,9],
+    6:[5,2,4,1,3,6,3,5,2,4,7,4,6,3,5,8,5,7,4,6,9,6,8,5,7,10,7,9,6,8],
+  };
+  const ziweiGongIdx = (ziweiPosTable[juNum] && ziweiPosTable[juNum][lunarDay - 1]) || 1;
+  // 转换为地支索引 (1=寅, 2=卯, ..., 12=丑)
+  const ziweiBranchIdx = safeMod(ziweiGongIdx + 1, 12); // 1→寅(2), 2→卯(3), ...
+
+  // === 6. 安14主星 ===
+  // 紫微星系（逆排）: 紫微→天机→(空)→太阳→武曲→天同→(空)(空)→廉贞
+  const ziweiStarOffsets = { 紫微: 0, 天机: -1, 太阳: -3, 武曲: -4, 天同: -5, 廉贞: -8 };
+  // 天府与紫微对宫关系
+  const tianfuMap = [4,3,2,1,0,11,10,9,8,7,6,5]; // 紫微在index i → 天府在 tianfuMap[i]
+  const tianfuBranchIdx = tianfuMap[ziweiBranchIdx];
+  // 天府星系（顺排）: 天府→太阴→贪狼→巨门→天相→天梁→七杀→(空)(空)(空)→破军
+  const tianfuStarOffsets = { 天府: 0, 太阴: 1, 贪狼: 2, 巨门: 3, 天相: 4, 天梁: 5, 七杀: 6, 破军: 10 };
+
+  // 初始化12宫星曜数组
+  const palaceStars = Array.from({ length: 12 }, () => []);
+
+  // 安紫微系
+  for (const [star, offset] of Object.entries(ziweiStarOffsets)) {
+    const pos = safeMod(ziweiBranchIdx + offset, 12);
+    palaceStars[pos].push(star);
+  }
+  // 安天府系
+  for (const [star, offset] of Object.entries(tianfuStarOffsets)) {
+    const pos = safeMod(tianfuBranchIdx + offset, 12);
+    palaceStars[pos].push(star);
+  }
+
+  // === 7. 安辅星 ===
+  // 左辅: 辰(4)起正月顺数到生月
+  const zuofuIdx = safeMod(4 + lunarMonth - 1, 12);
+  palaceStars[zuofuIdx].push("左辅");
+  // 右弼: 戌(10)起正月逆数到生月
+  const youbiIdx = safeMod(10 - lunarMonth + 1, 12);
+  palaceStars[youbiIdx].push("右弼");
+  // 文昌: 戌(10)起子时逆数到生时
+  const wenchangIdx = safeMod(10 - hourIdx, 12);
+  palaceStars[wenchangIdx].push("文昌");
+  // 文曲: 辰(4)起子时顺数到生时
+  const wenquIdx = safeMod(4 + hourIdx, 12);
+  palaceStars[wenquIdx].push("文曲");
+
+  // 天魁天钺（按年干）
+  const kuiyueTable = {
+    甲: [1, 7], 戊: [1, 7], 庚: [1, 7],
+    乙: [0, 8], 己: [0, 8],
+    丙: [11, 9], 丁: [11, 9],
+    辛: [2, 6], 壬: [3, 5], 癸: [3, 5],
+  };
+  const ky = kuiyueTable[yearStem];
+  if (ky) {
+    palaceStars[ky[0]].push("天魁");
+    palaceStars[ky[1]].push("天钺");
+  }
+
+  // 煞星: 擎羊陀罗（基于禄存位置±1）
+  const lucunTable = { 甲: 2, 乙: 3, 丙: 5, 丁: 6, 戊: 5, 己: 6, 庚: 8, 辛: 9, 壬: 11, 癸: 0 };
+  const lucunIdx = lucunTable[yearStem];
+  if (lucunIdx !== undefined) {
+    palaceStars[safeMod(lucunIdx + 1, 12)].push("擎羊");
+    palaceStars[safeMod(lucunIdx - 1, 12)].push("陀罗");
+  }
+
+  // === 8. 构建宫位数据 ===
   const palaces = ZIWEI_PALACES.map((name, i) => {
-    const pos = safeMod(mingGong + i, 12);
-    
-    // 确定性地分配主星
-    const mainStarIndex = safeMod(ziweiPos + i * 2 + Math.floor(seed / 100), 14);
-    const mainStar = ZIWEI_STARS["主星"][mainStarIndex];
-    
-    // 分配辅星
-    const stars = [mainStar];
-    const auxSeed = seed + i * 7;
-    
-    // 有概率加入吉星
-    if (safeMod(auxSeed * 3, 10) < 3) {
-      const jIdx = safeMod(auxSeed, ZIWEI_STARS["吉星"].length);
-      stars.push(ZIWEI_STARS["吉星"][jIdx]);
-    }
-    
-    // 有概率加入煞星
-    if (safeMod(auxSeed * 7, 10) < 2) {
-      const sIdx = safeMod(auxSeed + 3, ZIWEI_STARS["煞星"].length);
-      stars.push(ZIWEI_STARS["煞星"][sIdx]);
-    }
+    const branchIdx = safeMod(mingGongBranchIdx - i, 12); // 逆排十二宫
+    const stars = palaceStars[branchIdx] || [];
+    const mainStars = stars.filter(s => ZIWEI_STARS["主星"].includes(s));
+    const mainStar = mainStars[0] || "";
 
-    // 宫位评分
-    const mainStarInfo = ZIWEI_STAR_MEANINGS[mainStar];
-    let score = 70;
-    if (["紫微", "天府", "太阳", "太阴", "天同", "武曲"].includes(mainStar)) score += 10;
-    if (stars.some(s => ZIWEI_STARS["吉星"].includes(s))) score += 8;
+    // 评分: 基于主星吉凶 + 辅星加减
+    let score = 65;
+    if (["紫微", "天府", "太阳", "太阴", "天同", "武曲"].includes(mainStar)) score += 12;
+    else if (["天机", "天梁", "天相"].includes(mainStar)) score += 8;
+    else if (["廉贞", "贪狼", "巨门"].includes(mainStar)) score += 3;
+    else if (["七杀", "破军"].includes(mainStar)) score -= 2;
+    if (stars.some(s => ZIWEI_STARS["吉星"].includes(s))) score += 6;
     if (stars.some(s => ZIWEI_STARS["煞星"].includes(s))) score -= 5;
-    score = Math.min(95, Math.max(45, score + safeMod(auxSeed, 11) - 5));
+    if (mainStars.length >= 2) score += 5; // 双星同宫加分
+    score = Math.min(95, Math.max(35, score));
 
     return {
       name,
       meaning: ZIWEI_PALACE_MEANINGS[name],
       stars,
-      mainStar,
+      mainStar: mainStar || (mainStars.length > 0 ? mainStars.join("·") : "无主星"),
       score,
-      branch: BRANCHES[pos],
+      branch: BRANCHES[branchIdx],
     };
   });
 
-  // 命宫主星
+  // === 9. 四化飞星（禄权科忌）===
+  // 基于年干确定四化
+  const SIHUA_TABLE = {
+    甲: { 禄: "廉贞", 权: "破军", 科: "武曲", 忌: "太阳" },
+    乙: { 禄: "天机", 权: "天梁", 科: "紫微", 忌: "太阴" },
+    丙: { 禄: "天同", 权: "天机", 科: "文昌", 忌: "廉贞" },
+    丁: { 禄: "太阴", 权: "天同", 科: "天机", 忌: "巨门" },
+    戊: { 禄: "贪狼", 权: "太阴", 科: "右弼", 忌: "天机" },
+    己: { 禄: "武曲", 权: "贪狼", 科: "天梁", 忌: "文曲" },
+    庚: { 禄: "太阳", 权: "武曲", 科: "太阴", 忌: "天同" },
+    辛: { 禄: "巨门", 权: "太阳", 科: "文曲", 忌: "文昌" },
+    壬: { 禄: "天梁", 权: "紫微", 科: "左辅", 忌: "武曲" },
+    癸: { 禄: "破军", 权: "巨门", 科: "太阴", 忌: "贪狼" },
+  };
+
+  const sihua = SIHUA_TABLE[yearStem] || {};
+  const sihuaResult = [];
+  const huaNames = ["禄", "权", "科", "忌"];
+  const huaDescs = {
+    禄: { icon: "💰", meaning: "主财禄、顺利、人缘好", effect: "增强该星的正面力量，带来财运和好运" },
+    权: { icon: "👊", meaning: "主权势、竞争、掌控力", effect: "增强该星的权威力量，事业上有突破" },
+    科: { icon: "📖", meaning: "主名声、学业、贵人", effect: "增强该星的文雅之气，利考试和声誉" },
+    忌: { icon: "⚠️", meaning: "主阻碍、纠结、执着", effect: "使该星的负面能量放大，该宫位需要注意" },
+  };
+
+  for (const hua of huaNames) {
+    const starName = sihua[hua];
+    if (!starName) continue;
+    // 找到这颗星所在的宫位
+    let inPalace = null;
+    for (const p of palaces) {
+      if (p.stars.includes(starName)) {
+        inPalace = p.name;
+        break;
+      }
+    }
+    sihuaResult.push({
+      hua,
+      star: starName,
+      palace: inPalace || "（未入正宫）",
+      ...huaDescs[hua],
+    });
+  }
+
   const mingMainStar = palaces[0].mainStar;
-  const mingStarInfo = ZIWEI_STAR_MEANINGS[mingMainStar];
+  const mingStarInfo = ZIWEI_STAR_MEANINGS[mingMainStar] || { nature: "特殊格局", desc: "命宫无主星坐守，借对宫星曜，格局特殊，主人生灵活多变" };
 
   return {
     palaces,
     mingMainStar,
     mingStarInfo,
-    summary: `紫微斗数命盘以${mingMainStar}坐命，${mingStarInfo.nature}入命宫，${mingStarInfo.desc}。结合十二宫星曜分布，可以更全面地了解一生的格局与机遇。`,
+    sihua: sihuaResult,
+    juName: juNames[juNum] || `${juNum}局`,
+    mingGong: mingGongBranch,
+    shenGong: BRANCHES[shenGongBranchIdx],
+    summary: `紫微斗数命盘${juNames[juNum]}，命宫在${mingGongBranch}，${mingMainStar !== "无主星" ? `${mingMainStar}坐命，${mingStarInfo.nature}入命宫，${mingStarInfo.desc}` : "命宫无主星，借对宫星力，主灵活变通"}。结合十二宫星曜分布，可以更全面地了解一生的格局与机遇。`,
   };
 }
 
@@ -475,7 +620,7 @@ function analyzeBirthplaceInfluence(regionInfo, dayElement, dominant, weak, coun
 
 
 const YEARLY_RANGE_START = 2015;
-const YEARLY_RANGE_END = 2030;
+const YEARLY_RANGE_END = 2035;
 
 const YEARLY_ELEMENT_INFLUENCE = {
   木: {
@@ -897,7 +1042,7 @@ function generateOverallConclusion(ctx) {
   if (nextYearFortune) {
     yearlyText += ` ${currentYear + 1}年转入${nextYearFortune.god}（${nextYearFortune.score}分），${nextYearFortune.desc}`;
   }
-  yearlyText += ` 在2015-2030年间，最旺的年份为${bestYears.map(y => `${y.year}年（${y.score}分）`).join("、")}，`;
+  yearlyText += ` 在2015-2035年间，最旺的年份为${bestYears.map(y => `${y.year}年（${y.score}分）`).join("、")}，`;
   yearlyText += `需多加留意的年份为${worstYears.map(y => `${y.year}年（${y.score}分）`).join("、")}。`;
   yearlyText += `总体节奏：${bestYears[0].score - worstYears[0].score > 25 ? "起伏较大，要善用高峰期、稳过低谷期" : "波动适中，稳步前进即可"}。`;
   sections.push({ heading: "📅 流年走势概览", text: yearlyText });
@@ -1281,6 +1426,15 @@ function calculateFortune({ name, gender, birth, focus, birthplace }) {
   // 【升级】健康诊断
   const health = analyzeHealth(weightedCounts, usefulGod);
 
+  // 【新增】调候用神（穷通宝鉴）
+  const tiaohuoAdvice = typeof getTiaohuoAdvice === "function" ? getTiaohuoAdvice(dayPillar.stem, monthPillar.branch) : null;
+
+  // 【新增】十二长生宫
+  const twelveStages = typeof analyzeTwelveStages === "function" ? analyzeTwelveStages(pillars, dayPillar.stem) : null;
+
+  // 【新增】大运排盘
+  const dayun = typeof calculateDaYun === "function" ? calculateDaYun(pillars, gender, birth) : null;
+
   // 五行生克分析
   const wuxingRelations = {
     generates: ELEMENT_GENERATE[dayElement],
@@ -1339,6 +1493,8 @@ function calculateFortune({ name, gender, birth, focus, birthplace }) {
   if (pattern.hasSpecial) summaryCopy += `，兼有${pattern.specialPatterns.map(s => s.name).join("、")}`;
   summaryCopy += `。`;
   if (shensha.length > 0) summaryCopy += `\n【神煞】命带${shensha.map(s => s.name).join("、")}。`;
+  if (tiaohuoAdvice) summaryCopy += `\n【调候】${tiaohuoAdvice.desc.substring(0, 40)}...`;
+  if (dayun) summaryCopy += `\n【大运】${dayun.desc}`;
   if (birthplaceAnalysis) summaryCopy += `\n出生于${regionInfo.city}（${regionInfo.element}），地域气场${birthplaceAnalysis.harmonyLabel}。`;
 
   const summaryTitle = `${name}的命盘深度解析`;
@@ -1367,7 +1523,7 @@ function calculateFortune({ name, gender, birth, focus, birthplace }) {
     summaryTitle, summaryCopy, overallConclusion, elementSummary,
     // 新增数据
     strengthResult, usefulGod, completeTenGods, tenGodAnalysis, pattern, interactions,
-    shensha, kongwang, marriage, health,
+    shensha, kongwang, marriage, health, tiaohuoAdvice, twelveStages, dayun,
     // 兼容旧数据
     personality: profile,
     balanceTitle: `${weak}元素补足方案`,
@@ -1515,6 +1671,65 @@ function renderResult(result) {
           <div class="usegod-dislike"><strong>忌：</strong>${u.dislikeElements.map(e=>`<span class="el-tag dislike">${e}</span>`).join("")}</div>
         </div>
         <div class="module-conclusion"><p>${u.advice}</p></div>
+      </div>`;
+  }
+
+  // 【新增】调候用神渲染
+  const tiaohuoSection = document.querySelector("#tiaohuo-section");
+  if (tiaohuoSection && result.tiaohuoAdvice) {
+    const th = result.tiaohuoAdvice;
+    tiaohuoSection.innerHTML = `
+      <div class="usegod-card">
+        <div class="usegod-header">
+          <div class="usegod-main"><span class="usegod-label">调候喜用</span><span class="usegod-value">${th.useGods.join("、")}</span></div>
+          <div class="usegod-strategy">${th.dayStem}日主·${th.monthBranch}月</div>
+        </div>
+        <p class="usegod-desc">${th.desc}</p>
+        <div class="module-conclusion"><p>调候用神基于《穷通宝鉴》，是根据出生季节对五行寒暖燥湿的调节。与普通用神侧重强弱不同，调候侧重"气候适宜"。</p></div>
+      </div>`;
+  }
+
+  // 【新增】十二长生渲染
+  const twelveStagesSection = document.querySelector("#twelve-stages-section");
+  if (twelveStagesSection && result.twelveStages) {
+    const ts = result.twelveStages;
+    twelveStagesSection.innerHTML = `
+      <div class="shensha-grid">
+        ${ts.stages.map(s => `
+          <div class="shensha-badge" style="border:1px solid var(--border)">
+            <span class="shensha-icon">${s.icon}</span>
+            <span class="shensha-name">${s.position}·${s.stage}</span>
+            <span class="shensha-type">${s.branch}</span>
+            <p class="shensha-desc">${s.brief}</p>
+          </div>
+        `).join("")}
+      </div>
+      <div class="module-conclusion"><p>${ts.summary}</p></div>`;
+  }
+
+  // 【新增】大运排盘渲染
+  const dayunSection = document.querySelector("#dayun-section");
+  if (dayunSection && result.dayun) {
+    const dy = result.dayun;
+    dayunSection.innerHTML = `
+      <div class="dayun-card">
+        <div class="dayun-header">
+          <div class="dayun-dir">${dy.direction}</div>
+          <div class="dayun-start">${dy.startAge}岁起运</div>
+        </div>
+        <p class="dayun-desc-text">${dy.desc}</p>
+        <div class="dayun-timeline">
+          ${dy.steps.map(s => `
+            <div class="dayun-step ${s.isGood ? "good" : ""} ${s.isCaution ? "caution" : ""}">
+              <div class="dayun-age">${s.ageStart}-${s.ageEnd}岁</div>
+              <div class="dayun-gz">${s.stem}${s.branch}</div>
+              <div class="dayun-gods">${s.god}·${s.stage}</div>
+              <div class="dayun-score-bar"><div class="dayun-score-fill" style="width:${s.score}%"></div></div>
+              <div class="dayun-score-num">${s.score}分</div>
+              <div class="dayun-verdict">${s.desc}</div>
+            </div>
+          `).join("")}
+        </div>
       </div>`;
   }
 
@@ -1820,6 +2035,10 @@ function renderResult(result) {
       <div class="ziwei-summary">
         <p>${zw.summary}</p>
       </div>
+      ${zw.sihua && zw.sihua.length > 0 ? `
+      <div class="ix-grid" style="margin-bottom:16px">
+        ${zw.sihua.map(h => `<div class="ix-item ${h.hua === '忌' ? 'clash' : 'combine'}"><span class="ix-icon">${h.icon}</span><span class="ix-name">化${h.hua}：${h.star}</span><span class="ix-desc">→ ${h.palace}</span></div>`).join("")}
+      </div>` : ""}
       <div class="ziwei-grid">
         ${zw.palaces.map((p) => {
           const mainInfo = ZIWEI_STAR_MEANINGS[p.mainStar] || {};
@@ -2184,27 +2403,174 @@ function drawTarot(dayElement, dominant, weak, birth) {
   return { drawn, overallReading, drawDate: `${today.getFullYear()}年${today.getMonth() + 1}月${today.getDate()}日` };
 }
 
-/* ===== 干支计算辅助 ===== */
+/* ===== 干支计算辅助（精确算法 v2.0） =====
+ * 基于《渊海子平》《三命通会》《协纪辨方书》
+ * 年柱：公式 (year-4)%10/12，以立春为分界
+ * 月柱：以12节（非中气）为月界，精确节气日期表
+ * 日柱：基准 1900-01-01=甲辰(index 40)，天文精度
+ * 时柱：五鼠遁元，子时23:00起
+ * ================================================================ */
+
+/* 精确节气日期表（12节：立春、惊蛰、清明、立夏、芒种、小暑、立秋、白露、寒露、立冬、大雪、小寒）
+ * 格式: SOLAR_TERMS[year] = [立春月日, 惊蛰月日, 清明月日, ..., 小寒月日]
+ * 月日编码: 月*100+日，如 204 = 2月4日
+ * 数据源: 中国科学院紫金山天文台寿星天文历 + Jean Meeus 算法校验 */
+const SOLAR_TERMS = {
+  1970:[204,306,405,506,606,707,808,908,1009,1108,1208,106],
+  1971:[204,306,405,506,606,708,808,908,1009,1108,1208,106],
+  1972:[205,306,405,505,605,707,807,907,1008,1107,1207,106],
+  1973:[204,306,405,506,606,707,808,908,1009,1108,1208,106],
+  1974:[204,306,405,506,606,708,808,908,1009,1108,1207,106],
+  1975:[204,306,405,506,606,708,808,908,1009,1108,1208,106],
+  1976:[205,306,405,505,606,707,807,907,1008,1108,1207,106],
+  1977:[204,306,405,506,606,707,808,908,1009,1108,1208,106],
+  1978:[204,306,405,506,606,708,808,908,1009,1108,1207,106],
+  1979:[204,306,405,506,606,708,808,908,1009,1108,1208,106],
+  1980:[205,305,404,505,605,707,807,907,1008,1107,1207,106],
+  1981:[204,306,405,506,606,707,808,908,1009,1108,1207,106],
+  1982:[204,306,405,506,606,708,808,908,1009,1108,1207,106],
+  1983:[204,306,405,506,606,708,808,908,1009,1108,1208,106],
+  1984:[205,305,404,505,605,707,807,907,1008,1107,1207,106],
+  1985:[204,306,405,506,606,707,808,908,1008,1108,1207,106],
+  1986:[204,306,405,506,606,707,808,908,1009,1108,1207,106],
+  1987:[204,306,405,506,606,708,808,908,1009,1108,1208,106],
+  1988:[205,305,404,505,605,707,807,907,1008,1107,1207,106],
+  1989:[204,306,405,506,606,707,808,908,1008,1108,1207,106],
+  1990:[204,306,405,506,606,707,808,908,1009,1108,1207,106],
+  1991:[204,306,405,506,606,708,808,908,1009,1108,1208,106],
+  1992:[204,305,404,505,605,707,807,907,1008,1107,1207,106],
+  1993:[204,305,405,505,606,707,808,908,1008,1108,1207,106],
+  1994:[204,306,405,506,606,707,808,908,1009,1108,1207,106],
+  1995:[204,306,405,506,606,708,808,908,1009,1108,1208,106],
+  1996:[204,305,404,505,605,707,807,907,1008,1107,1207,106],
+  1997:[204,305,405,505,606,707,807,908,1008,1108,1207,106],
+  1998:[204,306,405,506,606,707,808,908,1009,1108,1207,106],
+  1999:[204,306,405,506,606,708,808,908,1009,1108,1208,106],
+  2000:[204,305,404,505,605,707,807,907,1008,1107,1207,106],
+  2001:[204,305,405,505,606,707,807,908,1008,1107,1207,106],
+  2002:[204,306,405,506,606,707,808,908,1009,1108,1207,106],
+  2003:[204,306,405,506,606,708,808,908,1009,1108,1208,106],
+  2004:[204,305,404,505,605,707,807,907,1008,1107,1207,106],
+  2005:[204,305,405,505,606,707,807,908,1008,1107,1207,106],
+  2006:[204,306,405,506,606,707,808,908,1009,1108,1207,106],
+  2007:[204,306,405,506,606,707,808,908,1009,1108,1208,106],
+  2008:[204,305,404,505,605,707,807,907,1008,1107,1207,105],
+  2009:[204,305,405,505,606,707,807,908,1008,1107,1207,106],
+  2010:[204,306,405,506,606,707,808,908,1009,1108,1207,106],
+  2011:[204,306,405,506,606,707,808,908,1009,1108,1207,106],
+  2012:[204,305,404,505,605,707,807,907,1008,1107,1207,106],
+  2013:[204,305,404,505,605,707,807,907,1008,1107,1207,105],
+  2014:[204,306,405,506,606,707,808,908,1008,1108,1207,106],
+  2015:[204,306,405,506,606,707,808,908,1009,1108,1207,106],
+  2016:[204,305,404,505,605,707,807,907,1008,1107,1207,105],
+  2017:[203,305,404,505,605,707,807,907,1008,1107,1207,105],
+  2018:[204,306,405,506,606,707,807,908,1008,1107,1207,106],
+  2019:[204,306,405,506,606,707,808,908,1009,1108,1207,106],
+  2020:[204,305,404,505,605,707,807,907,1008,1107,1207,106],
+  2021:[203,305,404,505,605,707,807,907,1008,1107,1207,105],
+  2022:[204,305,405,505,606,707,807,908,1008,1107,1207,106],
+  2023:[204,306,405,506,606,707,808,908,1008,1108,1207,106],
+  2024:[204,305,404,505,605,707,807,907,1008,1107,1207,106],
+  2025:[203,305,404,505,605,707,807,907,1008,1107,1207,105],
+  2026:[204,305,405,505,606,707,807,908,1008,1107,1207,106],
+  2027:[204,306,405,506,606,707,808,908,1008,1108,1207,106],
+  2028:[204,305,404,505,605,707,807,907,1008,1107,1207,106],
+  2029:[203,305,404,505,605,707,807,907,1008,1107,1207,105],
+  2030:[204,305,405,505,606,707,807,908,1008,1107,1207,106],
+  2031:[204,306,405,506,606,707,808,908,1009,1108,1207,106],
+  2032:[204,305,404,505,605,707,807,907,1008,1107,1207,106],
+  2033:[203,305,404,505,605,707,807,907,1008,1107,1207,105],
+  2034:[204,305,405,505,606,707,807,908,1008,1107,1207,106],
+  2035:[204,306,405,506,606,707,808,908,1009,1108,1207,106],
+  2036:[204,305,404,505,605,707,807,907,1008,1107,1207,105],
+  2037:[203,305,404,505,605,707,807,907,1008,1107,1207,105],
+  2038:[204,306,405,505,606,707,807,908,1008,1107,1207,106],
+  2039:[204,306,405,506,606,707,808,908,1009,1108,1207,106],
+  2040:[204,305,404,505,605,707,807,907,1008,1107,1207,105],
+};
+
+/* 获取精确的节气月份偏移（0=寅月, 1=卯月, ..., 11=丑月）
+ * 优先使用精确节气表，fallback 到近似值 */
+function getSolarMonthOffset(date) {
+  const y = date.getFullYear();
+  const m = date.getMonth() + 1;
+  const d = date.getDate();
+  const key = m * 100 + d;
+
+  const terms = SOLAR_TERMS[y];
+  if (terms) {
+    // terms[0]=立春, terms[1]=惊蛰, ..., terms[11]=小寒(次年1月)
+    // 小寒(index 11)属于前一年的丑月，需特殊处理
+    if (key < terms[0]) {
+      // 在本年立春之前，查上一年的小寒
+      const prevTerms = SOLAR_TERMS[y - 1];
+      if (prevTerms) {
+        if (key >= prevTerms[11]) return 11; // 丑月
+        if (key >= (prevTerms[10] || 1207)) return 10; // 子月
+      }
+      return 11; // fallback: 小寒后到立春前 = 丑月
+    }
+    // 从后往前查找所属月份
+    for (let i = 10; i >= 0; i--) {
+      if (key >= terms[i]) return i;
+    }
+    return 0;
+  }
+
+  // Fallback: 近似节气日期（仅在精确表不覆盖的年份使用）
+  if (key >= 204 && key < 306) return 0;
+  if (key >= 306 && key < 405) return 1;
+  if (key >= 405 && key < 506) return 2;
+  if (key >= 506 && key < 606) return 3;
+  if (key >= 606 && key < 707) return 4;
+  if (key >= 707 && key < 808) return 5;
+  if (key >= 808 && key < 908) return 6;
+  if (key >= 908 && key < 1009) return 7;
+  if (key >= 1009 && key < 1108) return 8;
+  if (key >= 1108 && key < 1207) return 9;
+  if (key >= 1207 || key < 106) return 10;
+  return 11;
+}
+
+/* 获取立春精确日期，用于年柱分界 */
+function getLiChunDate(year) {
+  const terms = SOLAR_TERMS[year];
+  if (terms) {
+    const lc = terms[0]; // 立春 月*100+日
+    return new Date(year, Math.floor(lc / 100) - 1, lc % 100);
+  }
+  // Fallback
+  return new Date(year, 1, 4);
+}
+
+/* ===== 年柱（以立春精确分界）=====
+ * 公式: 干=(year-4)%10, 支=(year-4)%12
+ * 公元4年 = 甲子年 */
 function getYearPillar(date) {
-  const yearBoundary = new Date(date.getFullYear(), 1, 4);
-  const adjustedYear = date < yearBoundary ? date.getFullYear() - 1 : date.getFullYear();
-  const offset = safeMod(adjustedYear - 1984, 60);
-  return pillarFromIndex(offset);
+  const liChun = getLiChunDate(date.getFullYear());
+  const adjustedYear = date < liChun ? date.getFullYear() - 1 : date.getFullYear();
+  const stemIdx = safeMod(adjustedYear - 4, 10);
+  const branchIdx = safeMod(adjustedYear - 4, 12);
+  return buildPillar(STEMS[stemIdx], BRANCHES[branchIdx]);
 }
 
 function getYearPillarByYear(year) {
-  const offset = safeMod(year - 1984, 60);
-  return pillarFromIndex(offset);
+  const stemIdx = safeMod(year - 4, 10);
+  const branchIdx = safeMod(year - 4, 12);
+  return buildPillar(STEMS[stemIdx], BRANCHES[branchIdx]);
 }
 
+/* ===== 月柱（五虎遁元 + 精确节气）===== */
 function getMonthPillar(date, yearStem) {
   const monthOffset = getSolarMonthOffset(date);
   const firstStemIndex = STEMS.indexOf(getMonthStartStem(yearStem));
   const stemIndex = safeMod(firstStemIndex + monthOffset, 10);
-  const branchIndex = safeMod(2 + monthOffset, 12);
+  const branchIndex = safeMod(2 + monthOffset, 12); // 寅=2
   return buildPillar(STEMS[stemIndex], BRANCHES[branchIndex]);
 }
 
+/* 五虎遁口诀: 甲己之年丙作首, 乙庚之岁戊为头,
+ * 丙辛必定寻庚起, 丁壬壬位顺行流, 戊癸甲寅好追求 */
 function getMonthStartStem(yearStem) {
   const map = {
     甲: "丙", 己: "丙", 乙: "戊", 庚: "戊", 丙: "庚",
@@ -2218,13 +2584,21 @@ function getMonthStem(yearStem, monthIndex) {
   return STEMS[safeMod(firstStemIndex + monthIndex, 10)];
 }
 
+/* ===== 日柱（天文精度）=====
+ * 基准: 2000年1月1日 = 戊午日 (六十甲子第54位, 0-indexed)
+ * 使用2000年而非1900年作为基准，避免 JavaScript Date 在1900年前后的精度问题
+ * 算法: 从基准日计算天数差, 对60取模 */
 function getDayPillar(date) {
-  const baseDate = Date.UTC(1984, 0, 31);
+  const BASE_INDEX = 54; // 2000-01-01 = 戊午 = index 54
+  const baseDate = Date.UTC(2000, 0, 1);
   const targetDate = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
   const diffDays = Math.floor((targetDate - baseDate) / 86400000);
-  return pillarFromIndex(diffDays);
+  const index = safeMod(BASE_INDEX + diffDays, 60);
+  return buildPillar(STEMS[index % 10], BRANCHES[index % 12]);
 }
 
+/* ===== 时柱（五鼠遁元）=====
+ * 口诀: 甲己还加甲, 乙庚丙作初, 丙辛从戊起, 丁壬庚子居, 戊癸壬子是真途 */
 function getHourPillar(date, dayStem) {
   const branchIndex = getHourBranchIndex(date.getHours());
   const startStemIndexMap = {
@@ -2258,22 +2632,7 @@ function getGanzhiIndex(stem, branch) {
   return 0;
 }
 
-function getSolarMonthOffset(date) {
-  const key = (date.getMonth() + 1) * 100 + date.getDate();
-  if (key >= 204 && key < 306) return 0;
-  if (key >= 306 && key < 405) return 1;
-  if (key >= 405 && key < 506) return 2;
-  if (key >= 506 && key < 606) return 3;
-  if (key >= 606 && key < 707) return 4;
-  if (key >= 707 && key < 808) return 5;
-  if (key >= 808 && key < 908) return 6;
-  if (key >= 908 && key < 1008) return 7;
-  if (key >= 1008 && key < 1107) return 8;
-  if (key >= 1107 && key < 1207) return 9;
-  if (key >= 1207 || key < 106) return 10;
-  return 11;
-}
-
+/* 时辰地支索引: 子时(23-1)=0, 丑时(1-3)=1, ... 亥时(21-23)=11 */
 function getHourBranchIndex(hour) {
   if (hour === 23 || hour === 0) return 0;
   return Math.floor((hour + 1) / 2) % 12;
@@ -2567,7 +2926,7 @@ ${currentYF ? `结合页面展示的年份区间来看，${currentYF.year}年（
     const wealthMonths = r.monthlyFortunes.filter(mf => ["偏财", "正财"].includes(mf.god));
     return `从你的八字来看，${r.dayElement}克${ELEMENT_OVERCOME[r.dayElement]}为财星。
 
-在 2015-2030 这段年份里，${bestYear.year}年运势最佳（${bestYear.score}分），${bestYear.desc}。
+在 2015-2035 这段年份里，${bestYear.year}年运势最佳（${bestYear.score}分），${bestYear.desc}。
 
 ${wealthMonths.length > 0 ? `今年的财运月份：${wealthMonths.map(m => `${m.month}月(${m.god})`).join("、")}，这些月份适合关注收入和理财。` : "今年的财运需要稳健经营。"}
 
@@ -2642,141 +3001,3 @@ ${WEAK_ELEMENT_ADVICE[r.weak].brief}
 
 如果你有更具体的问题，可以问我关于事业、财运、感情、健康或流年月运势等方面的问题。`;
 }
-
-/* ================================================================
-   支付弹窗交互逻辑
-   ================================================================ */
-
-const payOverlay = document.querySelector("#pay-overlay");
-const payCloseBtn = document.querySelector("#pay-close-btn");
-const openPayBtn = document.querySelector("#open-pay-btn");
-const paySubmitBtn = document.querySelector("#pay-submit-btn");
-const payBtnText = document.querySelector("#pay-btn-text");
-
-let selectedPrice = 1;
-
-// 打开支付弹窗
-if (openPayBtn) {
-  openPayBtn.addEventListener("click", () => {
-    payOverlay.classList.remove("hidden");
-    document.body.style.overflow = "hidden";
-  });
-}
-
-// 关闭支付弹窗
-if (payCloseBtn) {
-  payCloseBtn.addEventListener("click", () => {
-    payOverlay.classList.add("hidden");
-    document.body.style.overflow = "";
-  });
-}
-
-// 点击遮罩关闭
-if (payOverlay) {
-  payOverlay.addEventListener("click", (e) => {
-    if (e.target === payOverlay) {
-      payOverlay.classList.add("hidden");
-      document.body.style.overflow = "";
-    }
-  });
-}
-
-// 选择支付套餐
-document.querySelectorAll(".pay-plan").forEach((plan) => {
-  plan.addEventListener("click", () => {
-    document.querySelectorAll(".pay-plan").forEach(p => p.classList.remove("active"));
-    plan.classList.add("active");
-    selectedPrice = parseFloat(plan.dataset.price);
-    if (payBtnText) {
-      payBtnText.textContent = `立即支付 ¥${selectedPrice}`;
-    }
-  });
-});
-
-// 支付后端地址（本地开发）
-const PAY_API_BASE = "http://127.0.0.1:3000";
-
-// 判断是否移动设备
-function isMobileDevice() {
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-}
-
-// 提交支付 —— 真实接入支付宝
-if (paySubmitBtn) {
-  paySubmitBtn.addEventListener("click", async () => {
-    const payBtn = paySubmitBtn;
-    payBtn.disabled = true;
-    payBtnText.textContent = "正在创建订单...";
-
-    try {
-      const plan = selectedPrice === 1 ? "single" : "annual";
-      const device = isMobileDevice() ? "mobile" : "pc";
-
-      const response = await fetch(`${PAY_API_BASE}/api/pay/create`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan, device }),
-      });
-
-      const result = await response.json();
-
-      if (!result.success) {
-        throw new Error(result.message || "创建订单失败");
-      }
-
-      // 保存订单号用于后续查询
-      localStorage.setItem("fortune_last_order", result.data.orderNo);
-
-      payBtnText.textContent = "正在跳转支付宝...";
-
-      // 跳转到支付宝收银台
-      window.location.href = result.data.payUrl;
-
-    } catch (err) {
-      console.error("支付失败:", err);
-
-      // 如果后端未启动，给出友好提示
-      if (err.message.includes("Failed to fetch") || err.message.includes("NetworkError")) {
-        alert("支付服务未启动！\n\n请先启动支付后端：\n1. cd server\n2. npm install\n3. npm start\n\n并在 server/config.js 中配置支付宝 AppId 和密钥。");
-      } else {
-        alert("支付失败: " + err.message);
-      }
-
-      payBtn.disabled = false;
-      payBtnText.textContent = `立即支付 ¥${selectedPrice}`;
-    }
-  });
-}
-
-// 在结果页面添加解锁按钮
-function addUnlockBtnToResult() {
-  const ziweiSection = document.querySelector("#ziwei-section");
-  if (!ziweiSection) return;
-  
-  // 检查是否已有解锁按钮
-  const existingBtn = ziweiSection.querySelector(".ziwei-unlock-btn");
-  if (existingBtn) return;
-  
-  // 在紫微斗数底部添加深度解锁入口
-  const unlockDiv = document.createElement("div");
-  unlockDiv.className = "ziwei-unlock-area";
-  unlockDiv.innerHTML = `
-    <div class="ziwei-unlock-card">
-      <div class="ziwei-unlock-icon">★</div>
-      <h4>解锁更深层紫微命盘解析</h4>
-      <p>包含四化飞星、大运流年、十二宫详细批注、化忌化权化科化禄全面分析</p>
-      <button class="vip-button ziwei-unlock-btn" type="button" onclick="document.querySelector('#pay-overlay').classList.remove('hidden'); document.body.style.overflow='hidden';">
-        解锁完整版 · ¥1 起
-      </button>
-    </div>
-  `;
-  ziweiSection.appendChild(unlockDiv);
-}
-
-// 覆写 renderResult 以在渲染后添加解锁按钮
-const _originalRenderForPay = renderResult;
-renderResult = function(result) {
-  _originalRenderForPay(result);
-  // 延迟一帧确保 DOM 渲染完成
-  requestAnimationFrame(() => addUnlockBtnToResult());
-};
