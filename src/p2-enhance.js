@@ -93,7 +93,7 @@
       if (sScore) strengthLabel += `（${sScore.textContent.trim()}分）`;
     }
 
-    // 从 usegod-section 抓用神：正确的 class 是 .usegod-value，值形如 "丁火（火）"
+    // 从 usegod-section 抓用神、喜、忌
     let useGod = "";
     const useGodEl = $("#usegod-section .usegod-value")
       || $("#usegod-section .usegod-element")
@@ -109,6 +109,21 @@
       });
       if (hit) useGod = hit.textContent.trim().slice(0, 16);
     }
+
+    // 抓取「喜」「忌」五行列表
+    function extractLikeDislike(cls) {
+      const el = $(`#usegod-section .${cls}`);
+      if (!el) return "";
+      // 取子元素文本（排除 <strong> 标签本身），如 "木 火 土"
+      return Array.from(el.children)
+        .filter(c => c.tagName !== "STRONG" && c.classList.contains("el-tag"))
+        .map(c => c.textContent.trim())
+        .filter(Boolean)
+        .join(" ")
+        || el.textContent.replace(/^(喜|忌)[:：]\s*/, "").trim();
+    }
+    const likeEls = extractLikeDislike("usegod-like");
+    const dislikeEls = extractLikeDislike("usegod-dislike");
 
     // 从 pattern-section 抓主格局
     let pattern = "";
@@ -164,10 +179,28 @@
     const card = el("div", { id: "p2-quick-card", class: "p2-quick-card" });
     // dominant 原本格式为 "主导：火"，这里提纯成五行单字
     const dominantEl = (dominant.match(/[金木水火土]/g) || []).join("") || "—";
+    // 为每项值分配语义色
+    function valColor(k, v) {
+      if (!v || v === "—") return "";
+      switch (k) {
+        case "日主强弱":
+          return strengthLabel.includes("身强") ? "p2-quick-v-strong"
+            : strengthLabel.includes("身弱") ? "p2-quick-v-weak" : "p2-quick-v-balanced";
+        case "五行主导": return "p2-quick-v-el";
+        case "用神": return "p2-quick-v-god";
+        case "喜": return likeEls ? "p2-quick-v-good" : "";
+        case "忌": return dislikeEls ? "p2-quick-v-bad" : "";
+        case "主格局": return "p2-quick-v-pattern";
+        case "当前大运": return "p2-quick-v-dayun";
+        default: return "";
+      }
+    }
     const items = [
       { k: "日主强弱", v: strengthLabel || "—" },
       { k: "五行主导", v: dominantEl },
       { k: "用神", v: useGod || "—" },
+      { k: "喜", v: likeEls || "—" },
+      { k: "忌", v: dislikeEls || "—" },
       { k: "主格局", v: pattern || "—" },
       { k: "当前大运", v: curDayun || "—" },
     ];
@@ -180,7 +213,7 @@
         ${items.map(i => `
           <div class="p2-quick-cell">
             <div class="p2-quick-k">${i.k}</div>
-            <div class="p2-quick-v">${i.v}</div>
+            <div class="p2-quick-v${valColor(i.k, i.v) ? " " + valColor(i.k, i.v) : ""}">${i.v}</div>
           </div>`).join("")}
       </div>
       ${weak ? `<div class="p2-quick-sub">${weak}</div>` : ""}

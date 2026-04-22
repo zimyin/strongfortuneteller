@@ -1777,6 +1777,34 @@ button, input, select { font: inherit; color-scheme: dark; }
   letter-spacing: 0.04em;
 }
 
+/* 合婚 loading */
+.mm-loading {
+  display: none;
+  text-align: center;
+  padding: 48px 20px;
+  color: var(--text-secondary);
+}
+.mm-loading .mm-spinner {
+  display: inline-block;
+  width: 36px; height: 36px;
+  border: 3px solid var(--border);
+  border-top-color: var(--neon-blue);
+  border-radius: 50%;
+  animation: mm-spin .7s linear infinite;
+  margin-bottom: 14px;
+}
+@keyframes mm-spin { to { transform: rotate(360deg); } }
+.mm-loading span { font-size: .88rem; letter-spacing: .04em; }
+
+/* 合婚移动端适配 */
+@media (max-width: 640px) {
+  .mm-grid { grid-template-columns: 1fr; gap: 16px; }
+  .mm-row { grid-template-columns: 1fr; }
+  .mm-actions { flex-direction: column; }
+  .mm-submit { width: 100%; }
+  .mm-adv-caus { grid-template-columns: 1fr; }
+}
+
 /* 移动端 */
 @media (max-width: 820px) {
   .mm-grid { grid-template-columns: 1fr; }
@@ -3743,6 +3771,16 @@ body::after { opacity: 0.5; }
   color: var(--text-secondary);
   letter-spacing: 0.05em;
 }
+/* 值域色彩 */
+.p2-quick-v-good    { color: #6fd9a0; }
+.p2-quick-v-bad     { color: #f28a8a; }
+.p2-quick-v-strong  { color: #7eb8ff; }
+.p2-quick-v-weak    { color: #ffb07b; }
+.p2-quick-v-balanced{ color: #c4d98e; }
+.p2-quick-v-el      { color: #b49df0; }
+.p2-quick-v-god     { color: #f5c563; }
+.p2-quick-v-pattern { color: #7ee8e8; }
+.p2-quick-v-dayun   { color: #d4a8ff; }
 @media (max-width: 720px) {
   .p2-quick-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
   .p2-quick-card { padding: 16px 16px; }
@@ -3765,28 +3803,6 @@ body::after { opacity: 0.5; }
   border-radius: 12px;
   box-shadow: 0 4px 20px -8px rgba(106,184,201,0.25), inset 0 1px 0 rgba(255,255,255,0.03);
   position: relative;
-}
-/* 顶部提示气泡：告诉用户可以切换 */
-.p2-tabs::before {
-  content: "← 点击切换分类查看 →";
-  position: absolute;
-  top: -11px;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 2px 10px;
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  color: #0f111a;
-  background: linear-gradient(90deg, #e0a958, #f5cb8a);
-  border-radius: 999px;
-  white-space: nowrap;
-  pointer-events: none;
-  box-shadow: 0 2px 8px rgba(224,169,88,0.35);
-  animation: p2-tab-hint-pulse 2.6s ease-in-out infinite;
-}
-@keyframes p2-tab-hint-pulse {
-  0%, 100% { transform: translateX(-50%) translateY(0); opacity: 0.95; }
-  50% { transform: translateX(-50%) translateY(-2px); opacity: 1; }
 }
 .p2-tab-btn {
   padding: 10px 18px;

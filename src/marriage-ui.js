@@ -82,6 +82,27 @@
   });
 
   /* ---------- 提交 ---------- */
+  function setLoading(on) {
+    const btn = form.querySelector(".mm-submit");
+    const overlay = document.getElementById("mm-loading");
+    if (on) {
+      if (btn) { btn.disabled = true; btn.textContent = "合婚中..."; }
+      if (!overlay) {
+        const div = document.createElement("div");
+        div.id = "mm-loading";
+        div.className = "mm-loading";
+        div.innerHTML = '<div class="mm-spinner"></div><span>正在排盘分析，请稍候...</span>';
+        resultBox.parentNode.insertBefore(div, resultBox);
+      }
+      document.getElementById("mm-loading").style.display = "";
+      resultBox.classList.add("hidden");
+    } else {
+      if (btn) { btn.disabled = false; btn.textContent = "开始合婚"; }
+      const ov = document.getElementById("mm-loading");
+      if (ov) ov.style.display = "none";
+    }
+  }
+
   form.addEventListener("submit", (e) => {
     e.preventDefault();
     try {
@@ -99,19 +120,31 @@
         alert("合婚引擎未加载。");
         return;
       }
-      const mResult = calculateFortune(male);
-      const fResult = calculateFortune(female);
-      // 统一结构：补上 dayPillar（calculateFortune 只返回 dayStem/dayBranch，未聚合成对象）
-      normalizeForMatch(mResult, male);
-      normalizeForMatch(fResult, female);
 
-      const match = computeMarriageMatch(mResult, fResult);
-      render(match, mResult, fResult);
-      resultBox.classList.remove("hidden");
-      resultBox.scrollIntoView({ behavior: "smooth", block: "start" });
+      setLoading(true);
+
+      // 异步执行避免 UI 卡死（calculateFortune 是同步 CPU 密集计算）
+      setTimeout(() => {
+        try {
+          const mResult = calculateFortune(male);
+          const fResult = calculateFortune(female);
+          normalizeForMatch(mResult, male);
+          normalizeForMatch(fResult, female);
+          const match = computeMarriageMatch(mResult, fResult);
+          render(match, mResult, fResult);
+          resultBox.classList.remove("hidden");
+          resultBox.scrollIntoView({ behavior: "smooth", block: "start" });
+        } catch (err) {
+          console.error("合婚出错：", err);
+          alert("合婚计算出错：" + err.message + "\n\n" + (err.stack || "").split("\n").slice(0, 4).join("\n"));
+        } finally {
+          setLoading(false);
+        }
+      }, 50);
     } catch (err) {
       console.error("合婚出错：", err);
       alert("合婚计算出错：" + err.message + "\n\n" + (err.stack || "").split("\n").slice(0, 4).join("\n"));
+      setLoading(false);
     }
   });
 
