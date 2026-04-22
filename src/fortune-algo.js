@@ -258,6 +258,9 @@ const CITY_LONGITUDE = {
  * @param {Date} birth - 原始北京时间
  * @param {string} cityName - 标准化后的城市名
  * @returns {{adjusted: Date, offsetMin: number, longitude: number, note: string} | null}
+ *
+ * 注：本函数保留原名以向后兼容，实际为"平太阳时"（仅经度修正）。
+ * 新版请使用 applySolarTime(birth, cityName, mode)。
  */
 function applyTrueSolarTime(birth, cityName) {
   if (!cityName || !birth) return null;
@@ -270,8 +273,69 @@ function applyTrueSolarTime(birth, cityName) {
   const absMin = Math.abs(offsetMin);
   const m = Math.floor(absMin);
   const s = Math.round((absMin - m) * 60);
-  const note = `出生地${cityName}经度${lng.toFixed(2)}°E，与北京时间时差${sign}${m}分${s}秒，已自动修正为真太阳时`;
-  return { adjusted, offsetMin, longitude: lng, note };
+  const note = `出生地${cityName}经度${lng.toFixed(2)}°E，与北京时间时差${sign}${m}分${s}秒，已自动修正为平太阳时`;
+  return { adjusted, offsetMin, longitude: lng, note, mode: "mean" };
+}
+
+/* ===== 均时差（Equation of Time）=====
+ * 近似公式（Spencer 1971），误差 <1 分钟。
+ * 输入 Date，返回当天的均时差（分钟，正=太阳提前，负=太阳延后）。
+ */
+function equationOfTimeMinutes(date) {
+  const d = date instanceof Date ? date : new Date(date);
+  // 一年中的第几天
+  const start = new Date(d.getFullYear(), 0, 0);
+  const diff = d - start;
+  const dayOfYear = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const gamma = (2 * Math.PI / 365) * (dayOfYear - 1 + (d.getHours() - 12) / 24);
+  // Spencer 1971 公式
+  const eot = 229.18 * (
+    0.000075
+    + 0.001868 * Math.cos(gamma)
+    - 0.032077 * Math.sin(gamma)
+    - 0.014615 * Math.cos(2 * gamma)
+    - 0.040849 * Math.sin(2 * gamma)
+  );
+  return eot; // 分钟
+}
+
+/* ===== 双轨太阳时修正 =====
+ * @param {Date} birth
+ * @param {string} cityName
+ * @param {"true"|"mean"} mode - "true"=真太阳时（带均时差），"mean"=平太阳时（仅经度）
+ */
+function applySolarTime(birth, cityName, mode = "true") {
+  if (!cityName || !birth) return null;
+  const lng = CITY_LONGITUDE[cityName];
+  if (typeof lng !== "number") return null;
+  const meanOffsetMin = (lng - 120) * 4;
+  const eotMin = mode === "true" ? equationOfTimeMinutes(birth) : 0;
+  const totalOffsetMin = meanOffsetMin + eotMin;
+  const adjusted = new Date(birth.getTime() + totalOffsetMin * 60 * 1000);
+  const formatMs = (min) => {
+    const s = min >= 0 ? "+" : "−";
+    const a = Math.abs(min);
+    const m = Math.floor(a);
+    const sec = Math.round((a - m) * 60);
+    return `${s}${m}分${sec}秒`;
+  };
+  const note = mode === "true"
+    ? `出生地${cityName}（${lng.toFixed(2)}°E）：经度差${formatMs(meanOffsetMin)} + 均时差${formatMs(eotMin)} = 真太阳时${formatMs(totalOffsetMin)}`
+    : `出生地${cityName}（${lng.toFixed(2)}°E）：经度差${formatMs(meanOffsetMin)}，已修正为平太阳时（未计均时差）`;
+  return {
+    adjusted,
+    offsetMin: totalOffsetMin,
+    meanOffsetMin,
+    eotMin,
+    longitude: lng,
+    note,
+    mode,
+    modeLabel: mode === "true" ? "真太阳时" : "平太阳时",
+  };
+}
+if (typeof window !== "undefined") {
+  window.applySolarTime = applySolarTime;
+  window.equationOfTimeMinutes = equationOfTimeMinutes;
 }
 
 /* 模糊匹配出生地 */

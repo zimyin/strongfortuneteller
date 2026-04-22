@@ -207,10 +207,18 @@ form.addEventListener("submit", (event) => {
 
 /* ===== 核心计算 ===== */
 function calculateFortune({ name, gender, birth, focus, birthplace }) {
-  // 【新增】真太阳时修正
+  // 【新增】太阳时修正（优先使用双轨版 applySolarTime，含均时差 → 真太阳时；不可用时回退到平太阳时）
   // 先匹配一次出生地拿到标准城市名，再用该城市的经度修正时辰
   const preRegion = matchBirthplace(birthplace);
-  const solarInfo = preRegion ? applyTrueSolarTime(birth, preRegion.city) : null;
+  let solarInfo = null;
+  if (preRegion) {
+    if (typeof applySolarTime === "function") {
+      // 默认采用真太阳时（经度 + 均时差），命理传统更严谨
+      solarInfo = applySolarTime(birth, preRegion.city, "true");
+    } else if (typeof applyTrueSolarTime === "function") {
+      solarInfo = applyTrueSolarTime(birth, preRegion.city);
+    }
+  }
   const originalBirth = birth;
   const effectiveBirth = solarInfo ? solarInfo.adjusted : birth;
 
@@ -250,8 +258,9 @@ function calculateFortune({ name, gender, birth, focus, birthplace }) {
   const dayElement = STEM_ELEMENTS[dayPillar.stem];
   const strengthResult = calculateDayMasterStrength(pillars, dayPillar.stem);
 
-  // 【升级】用神取法
-  const usefulGod = determineUsefulGod(strengthResult, dayPillar.stem);
+  // 【升级】用神取法（基础版，先占位用于十神分析；稍后会被 advanced 版覆盖）
+  const usefulGodBase = determineUsefulGod(strengthResult, dayPillar.stem);
+  let usefulGod = usefulGodBase;
 
   // 【升级】完整十神（含地支藏干）
   const completeTenGods = getCompleteTenGods(pillars, dayPillar.stem);
@@ -268,32 +277,72 @@ function calculateFortune({ name, gender, birth, focus, birthplace }) {
     completeTenGods, tenGods, pillars, dayStem: dayPillar.stem, gender, strengthResult, usefulGod,
   });
 
-  // 【升级】格局判断
-  const pattern = determinePattern(pillars, dayPillar.stem, strengthResult, completeTenGods);
+  // 【升级】格局判断（基础版）
+  const patternBasic = determinePattern(pillars, dayPillar.stem, strengthResult, completeTenGods);
+
+  // 【升级 · 第一梯队③】格局扩展：从格/化气/专旺 + 15 种特殊格局 + 破格救应
+  const patternExtended = (typeof determinePatternExtended === "function")
+    ? determinePatternExtended(pillars, dayPillar.stem, strengthResult, completeTenGods)
+    : null;
+  // 最终 pattern：以扩展版为主（它已经 merge 了 basic 结构），没有就退回 basic
+  const pattern = patternExtended || patternBasic;
 
   // 【升级】合冲刑害分析
   const interactions = analyzeInteractions(pillars);
 
-  // 【升级】神煞系统（扩充到25个，加入性别参数用于孤辰寡宿判断）
+  // 【升级】神煞系统（扩充到 50+，加入性别参数用于孤辰寡宿判断）
   const shensha = analyzeShensha(pillars, dayPillar.stem, gender);
 
   // 【升级】空亡分析
   const kongwang = analyzeKongWang(pillars);
 
-  // 【升级】婚姻分析
-  const marriage = analyzeMarriage(pillars, dayPillar.stem, gender, strengthResult);
+  // 【升级】婚姻分析（v2：接入十神统计 + 神煞，做女命深度判断）
+  const marriage = analyzeMarriage(pillars, dayPillar.stem, gender, strengthResult, completeTenGods, shensha);
 
   // 【升级】健康诊断
   const health = analyzeHealth(weightedCounts, usefulGod);
 
-  // 【新增】调候用神（穷通宝鉴）
-  const tiaohuoAdvice = typeof getTiaohuoAdvice === "function" ? getTiaohuoAdvice(dayPillar.stem, monthPillar.branch) : null;
+  // 【升级 · 第一梯队②】调候三维推理（透干/藏支/不见 → manifestRatio）
+  const tiaohuoDeep = (typeof getTiaohuoAdviceDeep === "function")
+    ? getTiaohuoAdviceDeep(dayPillar.stem, monthPillar.branch, pillars)
+    : null;
+  // 基础版调候（向后兼容）
+  const tiaohuoAdvice = tiaohuoDeep || (typeof getTiaohuoAdvice === "function"
+    ? getTiaohuoAdvice(dayPillar.stem, monthPillar.branch)
+    : null);
+
+  // 【升级 · 第一梯队①】用神三法合参（扶抑 + 调候 + 格局）
+  if (typeof determineUsefulGodAdvanced === "function") {
+    const advanced = determineUsefulGodAdvanced(
+      strengthResult, dayPillar.stem, pillars, tiaohuoDeep, pattern
+    );
+    if (advanced) {
+      // advanced 包含 reasoning / consensusElement / narrative / conflictNote 等
+      // 同时保留 strategy / likeElements / dislikeElements 让下游渲染不需要改
+      usefulGod = { ...usefulGodBase, ...advanced };
+    }
+  }
 
   // 【新增】十二长生宫
   const twelveStages = typeof analyzeTwelveStages === "function" ? analyzeTwelveStages(pillars, dayPillar.stem) : null;
 
-  // 【新增】大运排盘
-  const dayun = typeof calculateDaYun === "function" ? calculateDaYun(pillars, gender, birth) : null;
+  // 【升级 · 第二梯队②】大运排盘（精确到岁月日，失败则回退旧版）
+  let dayun = null;
+  if (typeof calculateDaYunPrecise === "function") {
+    try {
+      dayun = calculateDaYunPrecise(pillars, gender, birth);
+    } catch (e) {
+      dayun = null;
+    }
+  }
+  if (!dayun && typeof calculateDaYun === "function") {
+    dayun = calculateDaYun(pillars, gender, birth);
+  }
+
+  // 【新增 · 第二梯队④】辅助盘位：胎元 / 命宫 / 身宫 / 小运 / 童限
+  const auxiliary = (typeof calculateAuxiliaryPoints === "function")
+    ? calculateAuxiliaryPoints(pillars, gender, birth)
+    : null;
 
   // 五行生克分析
   const wuxingRelations = {
@@ -370,14 +419,44 @@ function calculateFortune({ name, gender, birth, focus, birthplace }) {
   let summaryCopy = `${name}，${birthTimeStr}生人，属${zodiac}，日主${dayPillar.stem}${dayPillar.branch}（${dayElement}），纳音"${dayNayin}"——${NAYIN_DESCRIPTIONS[dayNayin] || ""}。`;
   summaryCopy += `\n\n【身强身弱】日主${strengthResult.label}（${strengthResult.strengthScore}分），${strengthResult.monthStatus}。${strengthResult.desc}`;
   summaryCopy += `\n【用神】${usefulGod.strategy}——喜${usefulGod.likeElements.join("、")}，忌${usefulGod.dislikeElements.join("、")}。`;
-  summaryCopy += `\n【格局】${pattern.mainPattern.name}——${pattern.mainPattern.desc}`;
+  if (usefulGod.narrative) summaryCopy += `\n${usefulGod.narrative}`;
+  if (usefulGod.conflictNote) summaryCopy += `\n${usefulGod.conflictNote}`;
+  const _patternDescTrimmed = (pattern.mainPattern.desc || "").replace(/[。.．]+\s*$/, "");
+  summaryCopy += `\n【格局】${pattern.mainPattern.name}——${_patternDescTrimmed}`;
   if (pattern.hasSpecial) summaryCopy += `，兼有${pattern.specialPatterns.map(s => s.name).join("、")}`;
+  if (pattern.transformPattern) summaryCopy += `；且成${pattern.transformPattern.name}`;
+  if (pattern.breakRescue && pattern.breakRescue.hasBreak) {
+    summaryCopy += pattern.breakRescue.rescued
+      ? `；有破（${pattern.breakRescue.breakReason}）但得救应（${pattern.breakRescue.rescueReason}）`
+      : `；有破局之虞（${pattern.breakRescue.breakReason}），未见救应`;
+  }
   summaryCopy += `。`;
-  if (shensha.length > 0) summaryCopy += `\n【神煞】命带${shensha.map(s => s.name).join("、")}。`;
-  if (tiaohuoAdvice) summaryCopy += `\n【调候】${tiaohuoAdvice.desc.substring(0, 40)}...`;
-  if (dayun) summaryCopy += `\n【大运】${dayun.desc}`;
+  if (shensha.length > 0) {
+    const shenshaNames = shensha.slice(0, 8).map(s => s.name).join("、");
+    summaryCopy += `\n【神煞】命带${shenshaNames}${shensha.length > 8 ? "等" + shensha.length + "项" : ""}。`;
+  }
+  if (tiaohuoAdvice) {
+    summaryCopy += `\n【调候】${(tiaohuoAdvice.desc || "").substring(0, 40)}...`;
+    if (tiaohuoDeep && tiaohuoDeep.manifestLevel) {
+      summaryCopy += `调候用神显化度：${tiaohuoDeep.manifestLevel}。`;
+    }
+  }
+  if (dayun) {
+    summaryCopy += `\n【大运】${dayun.desc}`;
+    if (dayun.precise && dayun.startAgePrecise) {
+      const p = dayun.startAgePrecise;
+      summaryCopy += `（精确起运：${p.years}岁${p.months}个月${p.days}天）`;
+    }
+  }
+  if (auxiliary) {
+    const aux = [];
+    if (auxiliary.taiyuan) aux.push(`胎元${auxiliary.taiyuan}`);
+    if (auxiliary.mingGong) aux.push(`命宫${auxiliary.mingGong}`);
+    if (auxiliary.shenGong) aux.push(`身宫${auxiliary.shenGong}`);
+    if (aux.length) summaryCopy += `\n【辅助盘位】${aux.join("、")}。`;
+  }
   if (birthplaceAnalysis) summaryCopy += `\n出生于${regionInfo.city}（${regionInfo.element}），地域气场${birthplaceAnalysis.harmonyLabel}。`;
-  if (solarInfo) summaryCopy += `\n【真太阳时】${solarInfo.note}。`;
+  if (solarInfo) summaryCopy += `\n【${solarInfo.modeLabel || "真太阳时"}】${solarInfo.note}。`;
 
   const summaryTitle = `${name}的命盘深度解析`;
   const focusSection = FOCUS_GUIDE[focus] || FOCUS_GUIDE.overall;
@@ -407,6 +486,8 @@ function calculateFortune({ name, gender, birth, focus, birthplace }) {
     // 新增数据
     strengthResult, usefulGod, completeTenGods, tenGodAnalysis, pattern, interactions,
     shensha, kongwang, marriage, health, tiaohuoAdvice, twelveStages, dayun,
+    // 第一/第二梯队深化数据
+    tiaohuoDeep, patternExtended, auxiliary,
     // 兼容旧数据
     personality: profile,
     balanceTitle: `${weak}元素补足方案`,

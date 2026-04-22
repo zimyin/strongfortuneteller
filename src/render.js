@@ -123,6 +123,25 @@ function renderResult(result) {
   const usegodSection = document.querySelector("#usegod-section");
   if (usegodSection && result.usefulGod) {
     const u = result.usefulGod;
+    // 三法合参推理链
+    let reasoningHtml = "";
+    if (Array.isArray(u.reasoning) && u.reasoning.length) {
+      reasoningHtml = `
+        <div class="usegod-reasoning">
+          <div class="ug-reasoning-title">三法合参 · 取用推理</div>
+          <ul class="ug-reasoning-list">
+            ${u.reasoning.map(r => `
+              <li class="ug-reasoning-item">
+                <span class="ug-r-method">${r.method || ""}</span>
+                <span class="ug-r-element">${r.element || ""}</span>
+                <span class="ug-r-reason">${r.reason || ""}</span>
+              </li>`).join("")}
+          </ul>
+          ${u.consensusElement ? `<div class="ug-consensus">三法合参共识：<strong>${u.consensusElement}</strong></div>` : ""}
+          ${u.conflictNote ? `<div class="ug-conflict">⚠ ${u.conflictNote}</div>` : ""}
+        </div>`;
+    }
+    const narrativeHtml = u.narrative ? `<p class="usegod-narrative">${u.narrative}</p>` : "";
     usegodSection.innerHTML = `
       <div class="usegod-card">
         <div class="usegod-header">
@@ -134,14 +153,30 @@ function renderResult(result) {
           <div class="usegod-like"><strong>喜：</strong>${u.likeElements.map(e=>`<span class="el-tag like">${e}</span>`).join("")}</div>
           <div class="usegod-dislike"><strong>忌：</strong>${u.dislikeElements.map(e=>`<span class="el-tag dislike">${e}</span>`).join("")}</div>
         </div>
+        ${reasoningHtml}
+        ${narrativeHtml}
         <div class="module-conclusion"><p>${u.advice}</p></div>
       </div>`;
   }
 
-  // 【新增】调候用神渲染
+  // 【新增】调候用神渲染（含显化度）
   const tiaohuoSection = document.querySelector("#tiaohuo-section");
   if (tiaohuoSection && result.tiaohuoAdvice) {
     const th = result.tiaohuoAdvice;
+    // 显化度徽章：优先从 tiaohuoDeep 取
+    const deep = result.tiaohuoDeep || th;
+    let manifestHtml = "";
+    if (deep && deep.manifestLevel) {
+      const lvlClass = deep.manifestLevel === "透干" ? "manifest-high"
+        : deep.manifestLevel === "藏支" ? "manifest-mid" : "manifest-low";
+      const ratioPct = typeof deep.manifestRatio === "number" ? Math.round(deep.manifestRatio * 100) : null;
+      manifestHtml = `
+        <div class="tiaohuo-manifest">
+          <span class="manifest-badge ${lvlClass}">显化度：${deep.manifestLevel}</span>
+          ${ratioPct !== null ? `<span class="manifest-ratio">得用率 ${ratioPct}%</span>` : ""}
+          ${deep.manifestDetail ? `<p class="manifest-detail">${deep.manifestDetail}</p>` : ""}
+        </div>`;
+    }
     tiaohuoSection.innerHTML = `
       <div class="usegod-card">
         <div class="usegod-header">
@@ -149,7 +184,8 @@ function renderResult(result) {
           <div class="usegod-strategy">${th.dayStem}日主·${th.monthBranch}月</div>
         </div>
         <p class="usegod-desc">${th.desc}</p>
-        <div class="module-conclusion"><p>调候用神基于《穷通宝鉴》，是根据出生季节对五行寒暖燥湿的调节。与普通用神侧重强弱不同，调候侧重"气候适宜"。</p></div>
+        ${manifestHtml}
+        <div class="module-conclusion"><p>调候用神基于《穷通宝鉴》，是根据出生季节对五行寒暖燥湿的调节。调候用神"透干"优于"藏支"，"藏支"优于"不见"——不见即为调候失令，需大运流年补足。</p></div>
       </div>`;
   }
 
@@ -171,10 +207,15 @@ function renderResult(result) {
       <div class="module-conclusion"><p>${ts.summary}</p></div>`;
   }
 
-  // 【新增】大运排盘渲染
+  // 【新增】大运排盘渲染（含精确起运）
   const dayunSection = document.querySelector("#dayun-section");
   if (dayunSection && result.dayun) {
     const dy = result.dayun;
+    let preciseHtml = "";
+    if (dy.precise && dy.startAgePrecise) {
+      const p = dy.startAgePrecise;
+      preciseHtml = `<div class="dayun-precise">精确起运：<strong>${p.years}岁 ${p.months}个月 ${p.days}天</strong>${p.fromJieqi ? `（依据节气：${p.fromJieqi}）` : ""}</div>`;
+    }
     dayunSection.innerHTML = `
       <div class="dayun-card">
         <div class="dayun-header">
@@ -182,6 +223,7 @@ function renderResult(result) {
           <div class="dayun-start">${dy.startAge}岁起运</div>
         </div>
         <p class="dayun-desc-text">${dy.desc}</p>
+        ${preciseHtml}
         <div class="dayun-timeline">
           ${dy.steps.map(s => `
             <div class="dayun-step ${s.isGood ? "good" : ""} ${s.isCaution ? "caution" : ""}">
@@ -195,6 +237,81 @@ function renderResult(result) {
           `).join("")}
         </div>
       </div>`;
+  }
+
+  // 【新增】辅助盘位：胎元/命宫/身宫/小运/童限
+  const auxiliarySection = document.querySelector("#auxiliary-section");
+  if (auxiliarySection && result.auxiliary) {
+    const ax = result.auxiliary;
+    const fmtGZ = (v) => {
+      if (!v) return "—";
+      if (typeof v === "string") return v;
+      if (v.stem && v.branch) return `${v.stem}${v.branch}`;
+      if (v.gan && v.zhi) return `${v.gan}${v.zhi}`;
+      return "—";
+    };
+    const cellHtml = (label, value, desc) => `
+      <div class="aux-cell">
+        <div class="aux-label">${label}</div>
+        <div class="aux-value">${fmtGZ(value)}</div>
+        ${desc ? `<div class="aux-desc">${desc}</div>` : ""}
+      </div>`;
+    let xiaoyunHtml = "";
+    if (Array.isArray(ax.xiaoyun) && ax.xiaoyun.length) {
+      xiaoyunHtml = `
+        <div class="xiaoyun-block">
+          <div class="xiaoyun-title">小运（起运前 8 年，逐年排）</div>
+          <div class="xiaoyun-grid">
+            ${ax.xiaoyun.map(x => `
+              <div class="xiaoyun-item">
+                <span class="xy-age">${x.age}岁</span>
+                <span class="xy-gz">${x.stem}${x.branch}</span>
+                ${x.god ? `<span class="xy-god">${x.god}</span>` : ""}
+              </div>`).join("")}
+          </div>
+        </div>`;
+    }
+    const tongxianHtml = ax.tongxian
+      ? (() => {
+          const ageEnd = ax.tongxian.ageEnd || (Array.isArray(ax.xiaoyun) && ax.xiaoyun.length ? ax.xiaoyun.length : 8);
+          return `<div class="tongxian-block"><span class="tongxian-label">童限</span><span class="tongxian-value">${ageEnd}岁前</span><span class="tongxian-desc">${ax.tongxian.desc || ""}</span></div>`;
+        })()
+      : "";
+    auxiliarySection.innerHTML = `
+      <div class="aux-card">
+        <div class="aux-grid">
+          ${cellHtml("胎元", ax.taiyuan, "先天气象·月柱退两位干支")}
+          ${cellHtml("命宫", ax.mingGong, "性情所宿·生时与月令定宫")}
+          ${cellHtml("身宫", ax.shenGong, "后天心志·生时与命宫互配")}
+        </div>
+        ${xiaoyunHtml}
+        ${tongxianHtml}
+        <div class="module-conclusion"><p>辅助盘位为四柱之外的辅助视角：胎元看投胎气象与童幼根基；命宫为先天性情之所宿；身宫反映心志与行事；小运细察起运前的年运；童限补全大运起前之童年吉凶。</p></div>
+      </div>`;
+  }
+
+  // 【新增】太阳时修正说明
+  const solarSection = document.querySelector("#solar-section");
+  const solarWrap = document.querySelector("#solar-section-wrap");
+  if (solarSection && result.solarInfo) {
+    const si = result.solarInfo;
+    const meanMin = typeof si.meanOffsetMin === "number" ? si.meanOffsetMin.toFixed(1) : "—";
+    const eotMin = typeof si.eotMin === "number" ? si.eotMin.toFixed(1) : "—";
+    solarSection.innerHTML = `
+      <div class="solar-card">
+        <div class="solar-mode">
+          <span class="solar-badge">${si.modeLabel || (si.mode === "true" ? "真太阳时" : "平太阳时")}</span>
+          <span class="solar-note">${si.note || ""}</span>
+        </div>
+        <div class="solar-detail">
+          <div class="solar-row"><span class="sd-k">经度修正：</span><span class="sd-v">${meanMin} 分钟</span></div>
+          ${si.mode === "true" ? `<div class="solar-row"><span class="sd-k">均时差（EoT）：</span><span class="sd-v">${eotMin} 分钟</span></div>` : ""}
+        </div>
+        <div class="module-conclusion"><p>中国通用北京时间，但八字依太阳方位起时。经度每差 1°，时间相差 4 分钟；真太阳时还需加入地球公转椭圆轨道与黄赤交角造成的"均时差"，才更贴合地支时辰的本义。</p></div>
+      </div>`;
+    if (solarWrap) solarWrap.style.display = "";
+  } else if (solarWrap) {
+    solarWrap.style.display = "none";
   }
 
   // 【新增】合冲刑害
@@ -221,6 +338,36 @@ function renderResult(result) {
     const pt = result.pattern;
     let specialsHtml = "";
     if (pt.hasSpecial) specialsHtml = `<div class="pattern-specials"><h4>特殊格局</h4>${pt.specialPatterns.map(s => `<div class="pattern-sp-item"><span class="pattern-sp-name">${s.name}</span><span class="pattern-sp-desc">${s.desc}</span></div>`).join("")}</div>`;
+    // 从格/化气/专旺
+    let transformHtml = "";
+    if (pt.transformPattern) {
+      const tp = pt.transformPattern;
+      transformHtml = `
+        <div class="pattern-transform">
+          <div class="pt-badge pt-special">${tp.name}</div>
+          <p class="pt-transform-desc">${tp.desc || ""}</p>
+          ${tp.note ? `<p class="pt-transform-note">${tp.note}</p>` : ""}
+        </div>`;
+    }
+    // 破格救应
+    let breakHtml = "";
+    if (pt.breakRescue && pt.breakRescue.hasBreak) {
+      const br = pt.breakRescue;
+      breakHtml = `
+        <div class="pattern-break ${br.rescued ? "rescued" : "unrescued"}">
+          <div class="pb-title">
+            <span class="pb-badge ${br.rescued ? "ok" : "warn"}">${br.rescued ? "有破有救" : "破格未救"}</span>
+          </div>
+          <div class="pb-body">
+            <div class="pb-row"><span class="pb-key">破：</span><span class="pb-val">${br.breakReason || ""}</span></div>
+            ${br.rescued ? `<div class="pb-row"><span class="pb-key">救：</span><span class="pb-val">${br.rescueReason || ""}</span></div>` : ""}
+          </div>
+        </div>`;
+    }
+    // 扩展结论
+    const extendedHtml = pt.extendedConclusion
+      ? `<div class="module-conclusion pattern-ext-conclusion"><p>${pt.extendedConclusion}</p></div>`
+      : "";
     patternSection.innerHTML = `
       <div class="pattern-card">
         <div class="pattern-main">
@@ -229,8 +376,11 @@ function renderResult(result) {
         </div>
         <p class="pattern-brief">${pt.mainPattern.brief}</p>
         <p class="pattern-desc">${pt.mainPattern.desc}</p>
+        ${transformHtml}
         ${specialsHtml}
+        ${breakHtml}
         <div class="module-conclusion"><p>${pt.patternConclusion}</p></div>
+        ${extendedHtml}
       </div>`;
   }
 
@@ -302,6 +452,12 @@ function renderResult(result) {
   if (marriageSection && result.marriage) {
     const mg = result.marriage;
     const scoreColor = mg.score >= 75 ? "#22c55e" : mg.score >= 55 ? "#f59e0b" : "#ef4444";
+    const risksHtml = (Array.isArray(mg.risks) && mg.risks.length)
+      ? `<div class="marriage-risks">
+           <div class="marriage-risks-title">⚠ 重点警示</div>
+           ${mg.risks.map(r => `<div class="marriage-risk-item">${r}</div>`).join("")}
+         </div>`
+      : "";
     marriageSection.innerHTML = `
       <div class="marriage-card">
         <div class="marriage-header">
@@ -312,6 +468,7 @@ function renderResult(result) {
           <div class="marriage-rating">${mg.rating}</div>
         </div>
         <div class="marriage-factors">${mg.factors.map(f => `<div class="marriage-factor"><span class="mf-dot"></span>${f}</div>`).join("")}</div>
+        ${risksHtml}
         <div class="module-conclusion"><p>${mg.conclusion}</p></div>
       </div>`;
   }

@@ -34,3 +34,6 @@ npm-debug.log*
 # 临时文件
 *.tmp
 *.bak
+
+# 本地备份目录
+.backup/
