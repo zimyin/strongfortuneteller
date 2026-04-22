@@ -24,7 +24,7 @@ for cmd in npx; do
 done
 
 # 检查源文件
-for f in index.html bazi-core.js constants.js utils-ganzhi.js ziwei.js fortune-algo.js narrative.js divination.js render.js chat.js ui-main.js styles.css; do
+for f in index.html bazi-core.js constants.js utils-ganzhi.js ziwei.js fortune-algo.js narrative.js divination.js render.js chat.js ui-main.js marriage-match.js marriage-ui.js p2-enhance.js styles.css; do
   if [ ! -f "$SRC/$f" ]; then
     echo "❌ 缺少源文件: src/$f"
     exit 1
@@ -47,6 +47,9 @@ cat "$SRC/bazi-core.js" \
     "$SRC/render.js" \
     "$SRC/chat.js" \
     "$SRC/ui-main.js" \
+    "$SRC/marriage-match.js" \
+    "$SRC/marriage-ui.js" \
+    "$SRC/p2-enhance.js" \
     > "$DIST/_combined.js"
 npx uglifyjs "$DIST/_combined.js" -o "$DIST/_combined.min.js" \
   -c drop_console=false,passes=2 \
@@ -55,11 +58,11 @@ npx uglifyjs "$DIST/_combined.js" -o "$DIST/_combined.min.js" \
 # HTML 中第一个加载的是 bazi-core.js，所以合并后的代码放到 bazi-core.js
 # 其他模块文件写入空 stub，防止 404
 cp "$DIST/_combined.min.js" "$DIST/bazi-core.js"
-for stub in constants utils-ganzhi ziwei fortune-algo narrative divination render chat ui-main; do
+for stub in constants utils-ganzhi ziwei fortune-algo narrative divination render chat ui-main marriage-match marriage-ui p2-enhance; do
   echo "/* merged into bazi-core.js */" > "$DIST/${stub}.js"
 done
 rm -f "$DIST/_combined.js" "$DIST/_combined.min.js"
-echo "  ✅ JS 已合并混淆（10 个模块 → bazi-core.js）"
+echo "  ✅ JS 已合并混淆（13 个模块 → bazi-core.js）"
 
 # === CSS 压缩 ===
 npx cleancss -o "$DIST/styles.css" "$SRC/styles.css"
@@ -113,7 +116,7 @@ done
 
 # 合并后的 JS 总大小对比
 src_total=0
-for f in bazi-core.js constants.js utils-ganzhi.js ziwei.js fortune-algo.js narrative.js divination.js render.js chat.js ui-main.js; do
+for f in bazi-core.js constants.js utils-ganzhi.js ziwei.js fortune-algo.js narrative.js divination.js render.js chat.js ui-main.js marriage-match.js marriage-ui.js p2-enhance.js; do
   [ -f "$SRC/$f" ] && src_total=$((src_total + $(wc -c < "$SRC/$f" | tr -d ' ')))
 done
 dst_total=$(wc -c < "$DIST/bazi-core.js" | tr -d ' ')

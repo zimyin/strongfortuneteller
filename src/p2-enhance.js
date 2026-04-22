@@ -79,19 +79,36 @@
   function renderQuickConclusion() {
     const rc = $("#result-content");
     if (!rc || rc.classList.contains("hidden")) return;
-    if ($("#p2-quick-card")) return; // 避免重复插入
-
     // 从已渲染 DOM 抓取要点（render.js 已填值）
-    const dominant = $("#dominant-pill")?.textContent?.trim() || "";
-    const weak = $("#weak-pill")?.textContent?.trim() || "";
+    const dominant = $("#dominant-pill")?.textContent?.trim() || ""; // "主导：火"
+    const weak = $("#weak-pill")?.textContent?.trim() || "";         // "待补：木"
     const summary = $("#summary-copy")?.textContent?.trim() || "";
 
-    // 从 usegod-section 抓第一用神
+    // 日主强弱：抓 strength-section 里的 .strength-badge（身强/身弱/偏强...）+ 分数
+    let strengthLabel = "";
+    const sBadge = $("#strength-section .strength-badge");
+    const sScore = $("#strength-section .strength-score");
+    if (sBadge) {
+      strengthLabel = sBadge.textContent.trim();
+      if (sScore) strengthLabel += `（${sScore.textContent.trim()}分）`;
+    }
+
+    // 从 usegod-section 抓用神：正确的 class 是 .usegod-value，值形如 "丁火（火）"
     let useGod = "";
-    const useGodEl = $("#usegod-section .usegod-element")
-      || $("#usegod-section strong")
+    const useGodEl = $("#usegod-section .usegod-value")
+      || $("#usegod-section .usegod-element")
       || $("#usegod-section .ug-element");
-    if (useGodEl) useGod = useGodEl.textContent.trim().slice(0, 12);
+    if (useGodEl) {
+      useGod = useGodEl.textContent.trim().slice(0, 16);
+    } else {
+      // 兜底：找 strong 时要排除 "喜：" "忌：" 这种标签文字
+      const strongs = $$("#usegod-section strong");
+      const hit = strongs.find(s => {
+        const t = s.textContent.trim();
+        return t && !/^(喜|忌)[:：]?$/.test(t);
+      });
+      if (hit) useGod = hit.textContent.trim().slice(0, 16);
+    }
 
     // 从 pattern-section 抓主格局
     let pattern = "";
@@ -145,8 +162,11 @@
     }
 
     const card = el("div", { id: "p2-quick-card", class: "p2-quick-card" });
+    // dominant 原本格式为 "主导：火"，这里提纯成五行单字
+    const dominantEl = (dominant.match(/[金木水火土]/g) || []).join("") || "—";
     const items = [
-      { k: "日主强弱", v: dominant || "—" },
+      { k: "日主强弱", v: strengthLabel || "—" },
+      { k: "五行主导", v: dominantEl },
       { k: "用神", v: useGod || "—" },
       { k: "主格局", v: pattern || "—" },
       { k: "当前大运", v: curDayun || "—" },
@@ -165,9 +185,15 @@
       </div>
       ${weak ? `<div class="p2-quick-sub">${weak}</div>` : ""}
     `;
-    const summaryCard = $(".summary-card");
-    if (summaryCard && summaryCard.parentNode) {
-      summaryCard.parentNode.insertBefore(card, summaryCard.nextSibling);
+    const existing = $("#p2-quick-card");
+    if (existing) {
+      // 已存在则替换内容（允许数据补齐后重算）
+      existing.innerHTML = card.innerHTML;
+    } else {
+      const summaryCard = $(".summary-card");
+      if (summaryCard && summaryCard.parentNode) {
+        summaryCard.parentNode.insertBefore(card, summaryCard.nextSibling);
+      }
     }
   }
 

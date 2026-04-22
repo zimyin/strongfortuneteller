@@ -391,6 +391,79 @@
       </main>
     </div>
 
+    <!-- 八字合婚专区（独立 section，位于"每日占卜"上方） -->
+    <section class="marriage-match-section" id="marriage-match-section">
+      <div class="home-div-header">
+        <h2>八字合婚</h2>
+        <p>分别输入两人生辰，基于十神对位 / 六合 / 用神互补 / 大运同步八维理论，生成合婚报告。</p>
+      </div>
+
+      <form id="marriage-match-form" class="mm-form">
+        <div class="mm-grid">
+          <!-- 男方 -->
+          <div class="mm-person-card mm-male">
+            <div class="mm-person-head">
+              <h3>男方</h3>
+              <button type="button" class="mm-copy-btn" data-copy="male">从上方「深度测算」复制</button>
+            </div>
+            <label class="mm-field">
+              <span>称呼</span>
+              <input type="text" name="m_name" maxlength="20" placeholder="例如：阿杰" />
+            </label>
+            <div class="mm-row">
+              <label class="mm-field">
+                <span>出生日期</span>
+                <input type="date" name="m_date" required />
+              </label>
+              <label class="mm-field">
+                <span>出生时刻</span>
+                <input type="time" name="m_time" value="12:00" required />
+              </label>
+            </div>
+            <label class="mm-field">
+              <span>出生地</span>
+              <input type="text" name="m_place" maxlength="30" placeholder="例如：深圳、北京（可选）" />
+            </label>
+          </div>
+
+          <!-- 女方 -->
+          <div class="mm-person-card mm-female">
+            <div class="mm-person-head">
+              <h3>女方</h3>
+              <button type="button" class="mm-copy-btn" data-copy="female">从上方「深度测算」复制</button>
+            </div>
+            <label class="mm-field">
+              <span>称呼</span>
+              <input type="text" name="f_name" maxlength="20" placeholder="例如：小满" />
+            </label>
+            <div class="mm-row">
+              <label class="mm-field">
+                <span>出生日期</span>
+                <input type="date" name="f_date" required />
+              </label>
+              <label class="mm-field">
+                <span>出生时刻</span>
+                <input type="time" name="f_time" value="12:00" required />
+              </label>
+            </div>
+            <label class="mm-field">
+              <span>出生地</span>
+              <input type="text" name="f_place" maxlength="30" placeholder="例如：杭州（可选）" />
+            </label>
+          </div>
+        </div>
+
+        <div class="mm-actions">
+          <button type="button" id="mm-fill-demo" class="ghost-button">填入示例（演示数据）</button>
+          <button type="submit" class="divination-btn mm-submit">开始合婚</button>
+        </div>
+      </form>
+
+      <div class="mm-result hidden" id="mm-result">
+        <!-- 合婚结果在这里渲染 -->
+      </div>
+    </section>
+
     <!-- 首页占卜区域 -->
     <section class="home-divination" id="home-divination">
       <div class="home-div-header">
@@ -559,7 +632,9 @@
     <script src="./divination.js?v=20260408_v2"></script>
     <script src="./render.js?v=20260408_v2"></script>
     <script src="./chat.js?v=20260408_v2"></script>
-    <script src="./ui-main.js?v=20260408_v2"></script>
-    <script src="./p2-enhance.js?v=20260422_1352"></script>
+    <script src="./ui-main.js?v=20260422_mm"></script>
+    <script src="./marriage-match.js?v=20260422_mm"></script>
+    <script src="./marriage-ui.js?v=20260422_mm"></script>
+    <script src="./p2-enhance.js?v=20260422_1640"></script>
   </body>
 </html>

@@ -1449,6 +1449,343 @@ button, input, select { font: inherit; color-scheme: dark; }
   line-height: 1.6;
 }
 
+/* ===== 八字合婚模块 ===== */
+.marriage-match-section {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 32px 24px 24px;
+  border-top: 1px solid var(--border);
+}
+.marriage-match-section .home-div-header h2::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 14px;
+  background: var(--neon-blue);
+  margin-right: 10px;
+  vertical-align: -2px;
+}
+.mm-form { }
+.mm-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.mm-person-card {
+  border: 1px solid var(--border);
+  background: var(--panel-bg);
+  padding: 18px 20px;
+  position: relative;
+}
+.mm-person-card.mm-male { border-top: 2px solid var(--neon-blue); }
+.mm-person-card.mm-female { border-top: 2px solid var(--neon-pink); }
+.mm-person-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-light);
+  margin-bottom: 14px;
+}
+.mm-person-head h3 {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 0.98rem;
+  color: var(--text-primary);
+  letter-spacing: 0.08em;
+}
+.mm-copy-btn {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  cursor: pointer;
+  letter-spacing: 0.04em;
+  transition: color .15s, border-color .15s;
+}
+.mm-copy-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+.mm-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+.mm-field span {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+}
+.mm-field input, .mm-field select {
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  padding: 8px 10px;
+  font-size: 0.88rem;
+  outline: none;
+  transition: border-color .15s;
+}
+.mm-field input:focus, .mm-field select:focus { border-color: var(--accent); }
+.mm-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.mm-actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.mm-submit { min-width: 180px; }
+
+/* 合婚结果 */
+.mm-result { margin-top: 28px; }
+.mm-result.hidden { display: none; }
+.mm-result-card {
+  border: 1px solid var(--border);
+  background: var(--panel-bg);
+  padding: 28px 26px;
+}
+.mm-score-head {
+  text-align: center;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--border-light);
+  margin-bottom: 22px;
+}
+.mm-score-num {
+  font-family: var(--serif);
+  font-size: 3.2rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.02em;
+}
+.mm-score-num span {
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  margin-left: 4px;
+  font-weight: 400;
+}
+.mm-score-grade {
+  margin-top: 8px;
+  color: var(--text-secondary);
+  font-family: var(--serif);
+  letter-spacing: 0.08em;
+  font-size: 1rem;
+}
+.mm-score-bar {
+  max-width: 360px;
+  margin: 14px auto 0;
+  height: 4px;
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.mm-score-fill {
+  height: 100%;
+  transition: width .6s ease;
+}
+
+.mm-couple-line {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.mm-couple-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.mm-couple-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  letter-spacing: 0.04em;
+}
+.mm-couple-slot code {
+  font-family: var(--serif);
+  font-size: 1.05rem;
+  color: var(--accent-light);
+  letter-spacing: 0.18em;
+  background: transparent;
+}
+.mm-couple-mid {
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  padding: 0 6px;
+}
+
+.mm-tag-line {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+.mm-tag {
+  font-size: 0.78rem;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-alt);
+  color: var(--text-secondary);
+  letter-spacing: 0.04em;
+}
+.mm-tag-good { border-color: rgba(78,201,122,0.4); color: #6fd9a0; }
+.mm-tag-bad  { border-color: rgba(224,82,82,0.4); color: #f28a8a; }
+
+/* 雷达图 */
+.mm-radar-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 10px 0 22px;
+}
+.mm-radar-svg {
+  width: 100%;
+  max-width: 420px;
+  height: auto;
+}
+
+.mm-sec-h {
+  font-family: var(--serif);
+  font-size: 1rem;
+  margin: 22px 0 14px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-light);
+  color: var(--text-primary);
+  letter-spacing: 0.06em;
+}
+
+/* 八维条 */
+.mm-dim-list { display: flex; flex-direction: column; gap: 14px; }
+.mm-dim-row {
+  border: 1px solid var(--border);
+  padding: 12px 14px;
+  background: var(--bg-alt);
+}
+.mm-dim-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.mm-dim-key {
+  font-family: var(--serif);
+  font-size: 0.92rem;
+  color: var(--text-primary);
+  letter-spacing: 0.06em;
+}
+.mm-dim-score {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  color: var(--accent);
+}
+.mm-dim-bar {
+  margin: 6px 0 8px;
+  height: 3px;
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.mm-dim-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--neon-blue), var(--neon-purple));
+}
+.mm-dim-title {
+  font-size: 0.82rem;
+  color: var(--accent-light);
+  margin-bottom: 4px;
+}
+.mm-dim-detail {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+/* 优势 / 提醒 */
+.mm-adv-caus {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 10px;
+}
+.mm-adv, .mm-caus {
+  border: 1px solid var(--border);
+  padding: 14px 16px;
+  background: var(--bg-alt);
+}
+.mm-adv h4, .mm-caus h4 {
+  margin: 0 0 8px;
+  font-family: var(--serif);
+  font-size: 0.9rem;
+  letter-spacing: 0.06em;
+}
+.mm-adv h4 { color: #6fd9a0; }
+.mm-caus h4 { color: #f28a8a; }
+.mm-adv ul, .mm-caus ul {
+  margin: 0;
+  padding-left: 18px;
+}
+.mm-adv li, .mm-caus li {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  margin-bottom: 4px;
+}
+.mm-adv li.muted, .mm-caus li.muted { color: var(--text-muted); }
+
+/* narrative */
+.mm-narrative {
+  border: 1px solid var(--border);
+  padding: 16px 18px;
+  background: var(--bg-alt);
+  font-size: 0.88rem;
+  line-height: 1.85;
+  color: var(--text-primary);
+}
+.mm-narrative h5 {
+  margin: 16px 0 8px;
+  font-family: var(--serif);
+  font-size: 0.95rem;
+  color: var(--accent);
+  letter-spacing: 0.06em;
+}
+.mm-narrative h5:first-child { margin-top: 0; }
+.mm-narrative ul {
+  margin: 4px 0 10px;
+  padding-left: 22px;
+}
+.mm-narrative li {
+  margin-bottom: 6px;
+  color: var(--text-secondary);
+}
+.mm-narrative strong {
+  color: var(--accent-light);
+  font-weight: 600;
+}
+.mm-narrative p { margin: 8px 0; }
+
+.mm-foot {
+  margin: 20px 0 0;
+  text-align: center;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+}
+
+/* 移动端 */
+@media (max-width: 820px) {
+  .mm-grid { grid-template-columns: 1fr; }
+  .mm-adv-caus { grid-template-columns: 1fr; }
+  .mm-result-card { padding: 20px 16px; }
+  .mm-score-num { font-size: 2.6rem; }
+  .marriage-match-section { padding: 24px 16px 18px; }
+}
+
 /* ===== 首页占卜区域 ===== */
 .home-divination {
   max-width: 1100px;
@@ -3376,7 +3713,7 @@ body::after { opacity: 0.5; }
 }
 .p2-quick-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 14px;
 }
 .p2-quick-cell {
