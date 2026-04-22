@@ -436,7 +436,11 @@ function calculateFortune({ name, gender, birth, focus, birthplace }) {
     summaryCopy += `\n【神煞】命带${shenshaNames}${shensha.length > 8 ? "等" + shensha.length + "项" : ""}。`;
   }
   if (tiaohuoAdvice) {
-    summaryCopy += `\n【调候】${(tiaohuoAdvice.desc || "").substring(0, 40)}...`;
+    const _thDesc = (tiaohuoAdvice.desc || "").trim();
+    const _thDescShort = _thDesc.length > 40 ? _thDesc.substring(0, 40) + "…" : _thDesc;
+    // 去掉末尾已有的标点/省略号，统一由下面收尾
+    const _thClean = _thDescShort.replace(/[。.．…\s]+$/, "");
+    summaryCopy += `\n【调候】${_thClean}。`;
     if (tiaohuoDeep && tiaohuoDeep.manifestLevel) {
       summaryCopy += `调候用神显化度：${tiaohuoDeep.manifestLevel}。`;
     }
@@ -450,9 +454,10 @@ function calculateFortune({ name, gender, birth, focus, birthplace }) {
   }
   if (auxiliary) {
     const aux = [];
-    if (auxiliary.taiyuan) aux.push(`胎元${auxiliary.taiyuan}`);
-    if (auxiliary.mingGong) aux.push(`命宫${auxiliary.mingGong}`);
-    if (auxiliary.shenGong) aux.push(`身宫${auxiliary.shenGong}`);
+    const _fmtGZ = (o) => (o && typeof o === "object") ? `${o.stem || ""}${o.branch || ""}` : (o || "");
+    if (auxiliary.taiyuan)  aux.push(`胎元${_fmtGZ(auxiliary.taiyuan)}`);
+    if (auxiliary.mingGong) aux.push(`命宫${_fmtGZ(auxiliary.mingGong)}`);
+    if (auxiliary.shenGong) aux.push(`身宫${_fmtGZ(auxiliary.shenGong)}`);
     if (aux.length) summaryCopy += `\n【辅助盘位】${aux.join("、")}。`;
   }
   if (birthplaceAnalysis) summaryCopy += `\n出生于${regionInfo.city}（${regionInfo.element}），地域气场${birthplaceAnalysis.harmonyLabel}。`;
