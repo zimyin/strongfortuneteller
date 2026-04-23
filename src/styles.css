@@ -3862,6 +3862,18 @@ body::after { opacity: 0.5; }
   .p2-tabs { gap: 6px; padding: 10px 6px; overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; }
   .p2-tabs::-webkit-scrollbar { display: none; }
   .p2-tab-btn { padding: 9px 14px; font-size: 13px; flex-shrink: 0; }
+
+  /* 大运流年移动端适配 */
+  .dayun-card { padding: 14px 12px; overflow: hidden; }
+  .dayun-header { flex-wrap: wrap; gap: 8px; }
+  .dayun-timeline { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .dayun-step { padding: 10px 6px; }
+  .dayun-gz { font-size: 1rem; }
+  .dayun-ix { gap: 2px; }
+  .dayun-ix-tag { font-size: .58rem; padding: 1px 4px; }
+  /* 大运曲线：强制缩放适配屏幕，禁止横滑 */
+  .p2-dayun-curve-wrap { padding: 10px 4px; overflow: hidden; max-width: 100%; box-sizing: border-box; }
+  #p2-dayun-curve { min-width: unset !important; width: 100% !important; max-width: 100% !important; height: auto; display: block; }
 }
 
 /* ---------- 折叠展开 ---------- */
@@ -3928,7 +3940,6 @@ body::after { opacity: 0.5; }
   border-radius: 12px;
   background: rgba(15,17,26,0.4);
   border: 1px solid rgba(255,255,255,0.04);
-  overflow-x: auto;
 }
 #p2-dayun-curve {
   min-width: 480px;
